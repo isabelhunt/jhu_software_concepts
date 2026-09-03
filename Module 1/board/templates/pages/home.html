@@ -1,11 +1,24 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h2>{% block title %}Home{% endblock title %}</h2>
+  <h2 class="home-title">{% block title %}Isabel Hunt{% endblock title %}</h2>
 {% endblock header %}
 
 {% block content %}
-  <p>
-    Learn more about this project by visiting the <a href="{{ url_for('pages.about') }}">About page</a>.
-  </p>
+  <div class="home-intro">
+    <div class="home-copy">
+      <h3>Flight Operations Engineer at STScI</h3>
+      <p>Isabel works on the James Webb Space Telescope Mission as a Flight Operations Engineer.
+        This work involves sending commands to the telescope and monitoring the telemetry of the
+        spacecraft to ensure the health and safety of the mission.
+
+        Isabel holds Bachelors Degree in Mechanical Engineering from Temple University.
+      </p>
+    </div>
+    <img
+      class="profile-photo"
+      src="{{ url_for('static', filename='images/profile.jpg') }}"
+      alt="Portrait of Isabel Hunt"
+    >
+  </div>
 {% endblock content %}
