@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h2 class="home-title">{% block title %}Projects{% endblock title %}</h2>
+{% endblock header %}
+
+{% block content %}
+  <div class="home-intro">
+    <div class="home-copy">
+      <h3>Creating a personal website (kinda meta)</h3>
+      <p>
+        Use a Flask framework to create a personal website. Find the source code on
+        <a href="https://github.com/isabelhunt/jhu_software_concepts/tree/main/Module%201/board" target="_blank" rel="noopener noreferrer">GitHub</a>.
+      </p>
+      <h3>CLEO to pyCLEO: Modernizing the Control Library for Use with the Green Bank Telescope</h3>
+      <p>
+        As an REU student at the Green Bank Radio Astronomy Observatory I investigated and documented 
+        a rewrite of the Green Bank Telescope (GBT) in Python. The resulting paper can be found 
+        <a href="https://www.nrao.edu/students/2020/Reports/HuntIsabel.pdf" target="_blank" rel="noopener noreferrer">here</a>. 
+      </p>
+    </div>
+  </div>
+{% endblock content %}

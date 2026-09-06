@@ -2,8 +2,7 @@
 
 ## Running the website
 
-From the Module 1 folder, run `python run.py`, then open
-`http://localhost:8080` in your browser.
+From the Module 1 folder, run `python run.py` (may need to run python3 run.py depending on venv), then open `http://localhost:8080` in your browser.
 
 ## Adding a profile photo
 

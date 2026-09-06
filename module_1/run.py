@@ -1,12 +1,5 @@
 """Run the personal website locally."""
 
-from pathlib import Path
-import sys
-
-
-MODULE_DIRECTORY = Path(__file__).resolve().parent / "Module 1"
-sys.path.insert(0, str(MODULE_DIRECTORY))
-
 from board import create_app
 
 
