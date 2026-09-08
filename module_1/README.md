@@ -1,5 +1,5 @@
 ## Running the website
-
+git@github.com:isabelhunt/jhu_software_concepts.git
 From the Module 1 folder, run `python run.py` (may need to run python3 run.py depending on env), then open `http://localhost:8080` in your browser.
 
 ## Adding a profile photo
