@@ -1,4 +1,6 @@
 import re
+import json
+from pathlib import Path
 
 
 def clean_data(soup):
@@ -61,3 +63,9 @@ def clean_data(soup):
         entries.append(entry)
 
     return entries
+
+def save_data(data):
+    """Save entry data as JSON"""
+    output_file = Path(__file__).with_name("applicant_data.json")
+    with output_file.open("w", encoding="utf-8") as file:
+        json.dump(data, file, indent=2)
