@@ -6,24 +6,25 @@ from bs4 import BeautifulSoup
 
 
 class GradCafeScraper:
-    """Scrape and clean the GradCafe survey page."""
+    """Scrape and clean a GradCafe survey page."""
 
     def __init__(self, url="https://www.thegradcafe.com/survey"):
         self.url = url
         self.driver = webdriver.Chrome()
         self.html_storage = []
 
-    def scrape_data(self):
-        """Open the survey page and return its parsed HTML."""
+    def _open(self):
         self.driver.get(self.url)
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
         )
-
+        
+    def scrape_data(self):
+        """Scrape soup object"""
         soup = BeautifulSoup(self.driver.page_source, "html.parser")
         self.html_storage.append([soup.prettify()])
         return soup
 
-    def close(self):
+    def _close(self):
         """Close the browser used by this scraper."""
         self.driver.quit()
