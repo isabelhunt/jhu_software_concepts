@@ -5,24 +5,28 @@ from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 from clean import clean_data
 
-url = "https://www.thegradcafe.com/survey"
 
-# Use selenium to open the website 
-driver = webdriver.Chrome()
-driver.get(url)
-WebDriverWait(driver, 10).until(
-    EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
-)
+class GradCafeScraper:
+    """Scrape and clean the GradCafe survey page."""
 
-# Parse the page HTML and store each page as an inner list.
-soup = BeautifulSoup(driver.page_source, "html.parser")
-html_storage = []
-html_storage.append([soup.prettify()])
+    def __init__(self, url="https://www.thegradcafe.com/survey"):
+        self.url = url
+        self.driver = webdriver.Chrome()
+        self.html_storage = []
+        self.entries = []
 
-# Store each survey result as a cleaned dictionary.
-entries = clean_data(soup)
+    def scrape_data(self):
+        """Open the survey page and return its cleaned entries."""
+        self.driver.get(self.url)
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
+        )
 
-print(entries)
+        soup = BeautifulSoup(self.driver.page_source, "html.parser")
+        self.html_storage.append([soup.prettify()])
+        self.entries = clean_data(soup)
+        return self.entries
 
-# Close browser
-driver.quit()
+    def close(self):
+        """Close the browser used by this scraper."""
+        self.driver.quit()
