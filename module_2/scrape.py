@@ -14,6 +14,7 @@ class GradCafeScraper:
         self.html_storage = []
 
     def _open(self):
+        """Use Selenium to open the webpage in Chrome"""
         self.driver.get(self.url)
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
@@ -26,5 +27,5 @@ class GradCafeScraper:
         return soup
 
     def _close(self):
-        """Close the browser used by this scraper."""
+        """Close the browser"""
         self.driver.quit()
