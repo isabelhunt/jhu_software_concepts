@@ -22,15 +22,18 @@ def clean_data(soup):
             details.append(detail_row.get_text(" ", strip=True))
 
         detail_text = " ".join(details)
+        raw_text = " ".join([row.get_text(" ", strip=True), *details])
         program_parts = cells[1].get_text("|", strip=True).split("|")
         decision_text = cells[3].get_text(" ", strip=True)
+        result_link = row.find("a", href=re.compile(r"^/result/\d+"))
+        result_url = (f"https://www.thegradcafe.com{result_link['href']}")
 
         entry = {
             "program": program_parts[0] if program_parts else None,
             "university": cells[0].get_text(" ", strip=True) or None,
             "comments": None,
             "date_added": cells[2].get_text(" ", strip=True) or None,
-            "url": None, #url with person ID
+            "url": result_url or None,
             "status": None,
             "accepted_date": None,
             "rejected_date": None,
@@ -42,7 +45,7 @@ def clean_data(soup):
             "GPA": None,
             "Degree": program_parts[1] if len(program_parts) > 1 else None,
             "GRE AW": None,
-            "raw_text": detail_text or None,
+            "raw_text": raw_text or None,
             "source_page_url": None, #url of page
         }
 

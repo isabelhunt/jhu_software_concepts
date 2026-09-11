@@ -3,9 +3,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
-from clean import clean_data, save_data
+from clean import clean_data
 from urllib3.util import parse_url
 from urllib.parse import urljoin
+from pathlib import Path
+import json
 import time
 
 class GradCafeScraper:
@@ -41,6 +43,12 @@ class GradCafeScraper:
         )
         return urljoin(self.url, next_link["href"]) if next_link else None
 
+    def save_data(self, data):
+        """Save entry data as JSON."""
+        output_file = Path(__file__).with_name("applicant_data.json")
+        with output_file.open("w", encoding="utf-8") as file:
+            json.dump(data, file, indent=2)
+
     def _close(self):
         """Close the browser"""
         self.driver.quit()
@@ -62,7 +70,7 @@ def main():
         scraper._close()
 
     entries = clean_data(soup)
-    save_data(entries)
+    scraper.save_data(entries)
 
     end_time = time.perf_counter()
     print(f"Run time: {end_time - start_time}")
