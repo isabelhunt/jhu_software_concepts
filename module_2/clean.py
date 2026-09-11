@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 
-def clean_data(soup):
+def clean_data(soup, source_page_url):
     """Return soup as a list of dictionaries with cleaned field values."""
     entries = []
     rows = soup.find_all("tr")
@@ -46,7 +46,7 @@ def clean_data(soup):
             "Degree": program_parts[1] if len(program_parts) > 1 else None,
             "GRE AW": None,
             "raw_text": raw_text or None,
-            "source_page_url": None, #url of page
+            "source_page_url": source_page_url,
         }
 
         season_match = re.search(r"\b(?:Fall|Spring|Summer|Winter) \d{4}\b", detail_text)

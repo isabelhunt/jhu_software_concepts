@@ -56,25 +56,27 @@ class GradCafeScraper:
 def main():
     url = "https://www.thegradcafe.com/survey"
     start_time = time.perf_counter()
-    scraper = GradCafeScraper(url)
 
+    entries = []
+    while url and len(entries) < 60:
+        scraper = GradCafeScraper(url)
 
-    try:
-        scraper._open()
-        soup = scraper.scrape_data()
+        try:
+            scraper._open()
+            soup = scraper.scrape_data()
 
-        next_url = scraper._find_next_link(soup)
-        if next_url:
-            print(f"Next link: {next_url}")
-    finally:
-        scraper._close()
+            next_url = scraper._find_next_link(soup)
 
-    entries = clean_data(soup)
+        finally:
+            scraper._close()
+
+        entries.extend(clean_data(soup, url))
+        url = next_url
+
     scraper.save_data(entries)
 
     end_time = time.perf_counter()
     print(f"Run time: {end_time - start_time}")
-
 
 if __name__ == "__main__":
     main()
