@@ -1,5 +1,25 @@
 [
   {
+    "program": "Speech Language Pathology",
+    "university": "Ithaca College",
+    "comments": "Application was verified late August, with my second letter of recommendation submitted 8/31.",
+    "date_added": "Sep 11, 2026",
+    "url": null,
+    "status": "accepted",
+    "accepted_date": "Sep 09",
+    "rejected_date": null,
+    "term": "Spring 2027",
+    "US/International": "American",
+    "GRE": null,
+    "GRE V": null,
+    "GRE Q": null,
+    "GPA": "4.00",
+    "Degree": "Masters",
+    "GRE AW": null,
+    "raw_text": "Accepted on Sep 09 Spring 2027 American GPA 4.00 Application was verified late August, with my second letter of recommendation submitted 8/31.",
+    "source_page_url": null
+  },
+  {
     "program": "Electrical Engineering and Computer Science",
     "university": "Bangladesh University of Engineering and Technology (BUET)",
     "comments": null,
@@ -176,7 +196,7 @@
     "GPA": "3.75",
     "Degree": "Masters",
     "GRE AW": null,
-    "raw_text": "Interview on Aug 06 Spring 2027 International GPA 3.75",
+    "raw_text": "Interview on Aug 06 Spring 2027 International GPA 3.75  ",
     "source_page_url": null
   },
   {
@@ -196,7 +216,7 @@
     "GPA": null,
     "Degree": "Masters",
     "GRE AW": null,
-    "raw_text": "Accepted on Mar 11 Fall 2026 American  ",
+    "raw_text": "Accepted on Mar 11 Fall 2026 American",
     "source_page_url": null
   },
   {
@@ -376,27 +396,7 @@
     "GPA": "3.45",
     "Degree": "PhD",
     "GRE AW": null,
-    "raw_text": "Accepted on Aug 28 Spring 2027 American GPA 3.45",
-    "source_page_url": null
-  },
-  {
-    "program": "Physics",
-    "university": "Heidelberg University",
-    "comments": null,
-    "date_added": "Aug 27, 2026",
-    "url": null,
-    "status": "accepted",
-    "accepted_date": "Jul 21",
-    "rejected_date": null,
-    "term": "Fall 2026",
-    "US/International": "Other",
-    "GRE": null,
-    "GRE V": null,
-    "GRE Q": null,
-    "GPA": "3.78",
-    "Degree": "Masters",
-    "GRE AW": null,
-    "raw_text": "Accepted on Jul 21 Fall 2026 Other GPA 3.78 International ",
+    "raw_text": "Accepted on Aug 28 Spring 2027 American GPA 3.45 ",
     "source_page_url": null
   }
 ]
