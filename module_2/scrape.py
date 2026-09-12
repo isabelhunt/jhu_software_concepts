@@ -1,10 +1,10 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
-from clean import clean_data
-from urllib3.util import parse_url
+from clean import clean_data, save_data, load_data, _json_file_exists
 from urllib.parse import urljoin
 from pathlib import Path
 import json
@@ -43,38 +43,53 @@ class GradCafeScraper:
         )
         return urljoin(self.url, next_link["href"]) if next_link else None
 
-    def save_data(self, data):
-        """Save entry data as JSON."""
-        output_file = Path(__file__).with_name("applicant_data.json")
-        with output_file.open("w", encoding="utf-8") as file:
-            json.dump(data, file, indent=2)
-
     def _close(self):
         """Close the browser"""
         self.driver.quit()
 
 def main():
     url = "https://www.thegradcafe.com/survey"
+    num_of_records = 25000
     start_time = time.perf_counter()
 
-    entries = []
-    while url and len(entries) < 60:
+    """Checks for existing json data"""
+    if _json_file_exists():
+        """Pulls existing data, finds the next url and continues"""
+        entries = load_data()
+        url = entries[-1].get("source_page_url", url)
         scraper = GradCafeScraper(url)
-
         try:
             scraper._open()
             soup = scraper.scrape_data()
-
             next_url = scraper._find_next_link(soup)
+        except TimeoutException:
+            print("Page load timed out. No new entries to save.")
+            return
+        finally:
+            scraper._close()
+        url = next_url
+    else:
+        """If no existing data it starts with an empty list"""
+        entries = []
 
+    while url and len(entries) < num_of_records:
+        scraper = GradCafeScraper(url)
+        try:
+            scraper._open()
+            soup = scraper.scrape_data()
+            next_url = scraper._find_next_link(soup)
+        except TimeoutException:
+            print("Page load timed out. Saving collected entries.")
+            save_data(entries)
+            return
         finally:
             scraper._close()
 
         entries.extend(clean_data(soup, url))
         url = next_url
 
-    scraper.save_data(entries)
-
+    save_data(entries)   
+    print(f'You have reached {len(entries)} records')
     end_time = time.perf_counter()
     print(f"Run time: {end_time - start_time}")
 

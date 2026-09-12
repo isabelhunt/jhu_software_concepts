@@ -51,7 +51,7 @@ def clean_data(soup, source_page_url):
 
         season_match = re.search(r"\b(?:Fall|Spring|Summer|Winter) \d{4}\b", detail_text)
         us_intl_match = re.search(r"\b(?:American|International|Other)\b", detail_text)
-        decision_match = re.search(r"\b(Accepted|Rejected|Wait listed|Interview)\b", decision_text, re.IGNORECASE)
+        decision_match = re.search(r"\b(Accepted|Rejected|Wait listed|Interview|Pending)\b", decision_text, re.IGNORECASE)
         decision_date_match = re.search(r"\bon\s+([A-Z][a-z]{2}\s+\d{1,2}(?:,\s*\d{4})?)\b", decision_text)
         general_gre_match = re.search(r"\bGRE(?:\s+General)?\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
         q_gre_match = re.search(r"\bGRE(?:,?\s+Q\b|,?\s+Quantitative)\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
@@ -89,3 +89,14 @@ def save_data(data):
     output_file = Path(__file__).with_name("applicant_data.json")
     with output_file.open("w", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
+
+def load_data():
+    """Return the entries already saved in applicant_data.json."""
+    output_file = Path(__file__).with_name("applicant_data.json")
+    with output_file.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+def _json_file_exists():
+    """Return whether applicant_data.json exists beside this module."""
+    output_file = Path(__file__).with_name("applicant_data.json")
+    return output_file.exists()
