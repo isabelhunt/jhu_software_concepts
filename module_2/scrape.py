@@ -6,8 +6,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 from clean import clean_data, save_data, load_data, _json_file_exists
 from urllib.parse import urljoin
-from pathlib import Path
-import json
 import time
 
 class GradCafeScraper:
@@ -73,6 +71,7 @@ def main():
         entries = []
 
     while url and len(entries) < num_of_records:
+        """Loop to grab fresh records until it hits num_of_records"""
         scraper = GradCafeScraper(url)
         try:
             scraper._open()
@@ -88,6 +87,7 @@ def main():
         entries.extend(clean_data(soup, url))
         url = next_url
 
+    """Saves scraped data to a json file"""
     save_data(entries)   
     print(f'You have reached {len(entries)} records')
     end_time = time.perf_counter()
