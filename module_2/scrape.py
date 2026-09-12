@@ -49,7 +49,7 @@ class GradCafeScraper:
 
 def main():
     url = "https://www.thegradcafe.com/survey"
-    num_of_records = 25000
+    num_of_records = 30000
     start_time = time.perf_counter()
 
     """Checks for existing json data"""
