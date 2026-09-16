@@ -24,10 +24,12 @@ def create_connection(db_name, db_user, db_password, db_host, db_port):
     return connection
 
 def load_data(connection, table_name="applicants", file_path=None):
-    """Append JSON Lines records; PostgreSQL generates each record's p_id.
+    """Load new JSON Lines records with unique, generated integer p_id values.
 
-    The connection should point to grad_data. Repeated calls append the data
-    again. All inserts are committed together, or rolled back on failure.
+    The connection should point to grad_data. Skip previously loaded URLs,
+    or identical stored records when no URL is available. Existing records
+    are left unchanged. Return the number inserted. All inserts are committed
+    together, or rolled back on failure.
     """
     source = (Path(file_path) if file_path is not None else
               Path(__file__).with_name("llm_extend_applicant_data.json"))
@@ -80,14 +82,43 @@ def load_data(connection, table_name="applicants", file_path=None):
                     llm_generated_university TEXT
                 )
             """).format(table))
+            # Serialize loaders so they cannot insert the same new URL together.
+            cursor.execute(sql.SQL("LOCK TABLE {} IN SHARE ROW EXCLUSIVE MODE").format(table))
+            cursor.execute(sql.SQL("""
+                SELECT program, comments, date_added, url, status, term,
+                       us_or_international, gpa, gre, gre_v, gre_aw, degree,
+                       llm_generated_program, llm_generated_university
+                FROM {}
+            """).format(table))
+            seen_urls = set()
+            seen_without_url = set()
+            for existing in cursor:
+                if existing[3]:
+                    seen_urls.add(existing[3])
+                else:
+                    seen_without_url.add(tuple(existing))
+
+            new_rows = []
+            for row in rows:
+                url = row[3]
+                if url:
+                    if url in seen_urls:
+                        continue
+                    seen_urls.add(url)
+                else:
+                    if row in seen_without_url:
+                        continue
+                    seen_without_url.add(row)
+                new_rows.append(row)
+
             cursor.executemany(sql.SQL("""
                 INSERT INTO {} (
                     program, comments, date_added, url, status, term,
                     us_or_international, gpa, gre, gre_v, gre_aw, degree,
                     llm_generated_program, llm_generated_university
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """).format(table), rows)
-    return len(rows)
+            """).format(table), new_rows)
+    return len(new_rows)
 
 def print_applicants(connection):
     """Print the first 100 applicants ordered by p_id, with column headings."""
@@ -98,12 +129,11 @@ def print_applicants(connection):
             print("\t".join("NULL" if value is None else str(value) for value in row))
 
 
-def _delete(connection, start_id, end_id):
+def _delete(connection):
     with connection.transaction():
         with connection.cursor() as cursor:
             cursor.execute(
-                "DELETE FROM applicants WHERE p_id BETWEEN %s AND %s",
-                (start_id, end_id),
+                "DROP TABLE applicants",
             )
             return cursor.rowcount
 
@@ -111,11 +141,5 @@ if __name__ == "__main__":
     connection = create_connection("grad_data", "postgres", "lanie89", "localhost", "54830")
     if connection is not None:
         with connection:
-            print_applicants(connection)
-
-"""
-    if connection is not None:
-        with connection:
             count = load_data(connection)
             print(f"Loaded {count} records into grad_data.")
-"""
