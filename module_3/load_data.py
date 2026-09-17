@@ -24,13 +24,7 @@ def create_connection(db_name, db_user, db_password, db_host, db_port):
     return connection
 
 def load_data(connection, table_name="applicants", file_path=None):
-    """Load new JSON Lines records with unique, generated integer p_id values.
-
-    The connection should point to grad_data. Skip previously loaded URLs,
-    or identical stored records when no URL is available. Existing records
-    are left unchanged. Return the number inserted. All inserts are committed
-    together, or rolled back on failure.
-    """
+    """Load new JSON Lines records with university and program combined."""
     source = (Path(file_path) if file_path is not None else
               Path(__file__).with_name("llm_extend_applicant_data.json"))
     rows = []
@@ -50,8 +44,13 @@ def load_data(connection, table_name="applicants", file_path=None):
                     float(entry[key]) if entry.get(key) not in (None, "") else None
                     for key in ("GPA", "GRE", "GRE V", "GRE AW")
                 ]
+                program = ", ".join(
+                    value.strip()
+                    for value in (entry.get("university"), entry.get("program"))
+                    if value and value.strip()
+                ) or None
                 rows.append((
-                    entry.get("program"), entry.get("comments"), date_added,
+                    program, entry.get("comments"), date_added,
                     entry.get("url"), entry.get("status"), entry.get("term"),
                     entry.get("US/International"), *scores, entry.get("Degree"),
                     entry.get("llm-generated-program"),
@@ -140,6 +139,6 @@ def _delete(connection):
 if __name__ == "__main__":
     connection = create_connection("grad_data", "postgres", "lanie89", "localhost", "54830")
     if connection is not None:
-        with connection:
+        with connection:       
             count = load_data(connection)
             print(f"Loaded {count} records into grad_data.")
