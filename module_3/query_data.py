@@ -86,7 +86,7 @@ def percent_accepted_fall_25(connection):
             WHERE term = 'Fall 2025'
         """)
         percentage = cursor.fetchone()[0]
-        print(f"Percent Fall 2025 acceptances entered: {percentage:.2f}%")
+        print(f"Fall 2025 acceptance percentage: {percentage:.2f}%")
 
 # Q6
 def average_accepted_fall_26_gpa(connection):
@@ -187,7 +187,8 @@ def temple_apps(connection):
         cursor.execute("""
             SELECT COUNT(program) 
             FROM applicants
-            WHERE lower(program) like '%temple university%'""")
+            WHERE lower(program) like '%temple university%'
+            """)
         count = cursor.fetchall()
         print(f"Temple University Applicant Count: {count[0][0]}")
 
