@@ -2,7 +2,10 @@ from decimal import Decimal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import sessionmaker
-from models import applicant, connect_db
+if __package__:
+    from .models import applicant, connect_db
+else:
+    from models import applicant, connect_db
 
 
 # Q1
