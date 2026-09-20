@@ -2,6 +2,7 @@ import fcntl
 from pathlib import Path
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 
 from flask import Flask, jsonify, render_template, request
 from sqlalchemy.exc import SQLAlchemyError
@@ -23,16 +24,26 @@ def pull_data():
         except BlockingIOError:
             return jsonify(error="A data pull is already running. Please wait."), 409
         try:
-            for command in (
-                [sys.executable, str(MODULE_DIR / 'scrape.py')],
-                [sys.executable, str(MODULE_DIR / 'load_data.py'),
-                 '--file-path', str(MODULE_DIR / 'applicant_data.json')],
-            ):
+            def run_script(script, *arguments):
                 subprocess.run(
-                    command, cwd=MODULE_DIR, check=True,
+                    [sys.executable, str(script), *map(str, arguments)],
+                    cwd=script.parent, check=True,
                     # Keep the lock held if the server stops while a child runs.
                     pass_fds=(lock.fileno(),),
                 )
+
+            run_script(MODULE_DIR / 'scrape.py')
+            output = MODULE_DIR / 'llm_extend_applicant_data.json'
+            # Preserve the existing output if enrichment fails partway through.
+            with TemporaryDirectory(prefix='.llm-output-', dir=MODULE_DIR) as temporary:
+                staged_output = Path(temporary) / output.name
+                run_script(
+                    MODULE_DIR / 'llm_hosting' / 'app.py',
+                    '--file', MODULE_DIR / 'applicant_data.json',
+                    '--out', staged_output,
+                )
+                staged_output.replace(output)
+            run_script(MODULE_DIR / 'load_data.py', '--file-path', output)
         except (subprocess.CalledProcessError, OSError):
             app.logger.exception("Data pull failed")
             return jsonify(error="The data pull failed. Please try again."), 500

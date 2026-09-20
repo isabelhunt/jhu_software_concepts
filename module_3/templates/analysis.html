@@ -122,7 +122,7 @@
     } catch (_) { /* Storage may be disabled in the browser. */ }
     pullButton.addEventListener('click', async () => {
         pullButton.disabled = true;
-        pullStatus.textContent = 'Running — checking Grad Café and loading new records…';
+        pullStatus.textContent = 'Running — checking Grad Café, standardizing names with the LLM, and loading new records…';
         pullProgress.classList.remove('completed');
         pullProgress.removeAttribute('value');
         try {

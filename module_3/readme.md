@@ -1,18 +1,35 @@
 Isabel Hunt (ihunt5)
-Module 2 Assignment: Web Scraping due on September 13th @11:59 pm
+Module 3 Assignment: Database Queries due on September 20th @11:59 pm
 
 ### SSH to the github repo ###
+
 git@github.com:isabelhunt/jhu_software_concepts.git
 
-### Database configuration
+### Database configuration ###
 
 Install dependencies with `python -m pip install -r module_3/requirements.txt`.
 For a new checkout, copy `module_3/.env.example` to `module_3/.env` and fill in
 `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, and `DB_PORT` for PostgreSQL.
 The app, ORM queries, SQL queries, and loader share these settings. Existing
 environment variables take precedence over the file. The local `.env` file
-is excluded from Git.
+is excluded from Git. 
 
+To load the data into a postgreSQL locally hosted database:
+`python load_data.py`
+
+To run the SQL queries:
+`python query_data.py`
+
+To run the SQL Alchemy queries:
+`python orm_queries.py`
+
+To run the Flask webpage:
+`python app.py` 
+go to http://localhost:8080/ in any browser 
+
+The flask webpage loads the data that is queried within orm_queries.py,
+The Pull Data button runs scrape.py, puts the resulting json through llm_hosting/app, and then load_data.py to update applicants database
+The Update Analysis button runs orm_queries.py and refreshes the page 
 
 ### Part 7: Compare SQL and SQLAlchemy ###
 
