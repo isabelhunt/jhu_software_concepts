@@ -1,6 +1,5 @@
 import psycopg
 from psycopg import OperationalError
-from psycopg import sql
 
 def create_connection(db_name, db_user, db_password, db_host, db_port):
     connection = None
