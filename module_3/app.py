@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from models import connect_db
@@ -38,8 +38,23 @@ def pull_data():
             return jsonify(error="The data pull failed. Please try again."), 500
     return jsonify(success=True)
 
+def pull_is_running():
+    with (MODULE_DIR / '.pull_data.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+    return False
+
+
+@app.get('/update-analysis', endpoint='update_analysis')
 @app.route('/')
 def index():
+    if request.endpoint == 'update_analysis' and pull_is_running():
+        return jsonify(error=(
+            "New data is currently being retrieved. Your current analysis is still displayed. "
+            "Please update again after Pull Data finishes."
+        )), 409
     db = None
     try:
         db = connect_db()

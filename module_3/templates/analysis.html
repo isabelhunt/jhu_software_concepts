@@ -8,6 +8,8 @@
         body { margin: 0; background: #f3f6fa; color: #192b40; font-family: system-ui, sans-serif; line-height: 1.6; }
         main { max-width: 960px; margin: auto; padding: 3rem 1.25rem; }
         h1 { line-height: 1.2; }
+        .page-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .page-header button { margin-left: auto; }
         .intro { color: #475569; }
         .results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1rem; }
         article, .comparison, .error { background: white; padding: 1.5rem; border: 1px solid #d7e0ea; border-radius: 12px; }
@@ -30,8 +32,13 @@
 </head>
 <body>
 <main>
-    <h1>Graduate Applicant Analysis</h1>
-    <p class="intro">Results from the applicants database. Refresh the page to load the latest data.</p>
+    <header class="page-header">
+        <h1>Graduate Applicant Analysis</h1>
+        <button type="button" class="pull-data" id="update-analysis">Update Analysis</button>
+    </header>
+    <p class="intro">Results are from the GradeCafe applicants database. Update Analysis re-calculates results if new data is available.</p>
+    <p id="analysis-status" role="status" aria-live="polite"></p>
+    <div id="analysis-results">
     {% if error %}
         <p class="error" role="alert">{{ error }}</p>
     {% else %}
@@ -59,7 +66,7 @@
             <p class="detail">N/A means there are no qualifying values to calculate an average or percentage.</p>
         </section>
     {% endif %}
-    <p><a href="{{ url_for('index') }}">Refresh results</a></p>
+    </div>
     <section class="pull-section" aria-label="Pull application data">
         <div class="pull-controls">
             <button type="button" class="pull-data" id="pull-data" aria-describedby="pull-description">Pull Data</button>
@@ -70,6 +77,34 @@
     </section>
 </main>
 <script>
+    const updateButton = document.getElementById('update-analysis');
+    const analysisStatus = document.getElementById('analysis-status');
+    updateButton.addEventListener('click', async () => {
+        updateButton.disabled = true;
+        analysisStatus.textContent = 'Checking for a data pull and updating analysis…';
+        try {
+            const response = await fetch({{ url_for('update_analysis')|tojson }}, {cache: 'no-store'});
+            if (response.status === 409) {
+                const data = await response.json();
+                analysisStatus.textContent = data.error;
+                return;
+            }
+            if (!response.ok) {
+                throw new Error('Unable to update analysis. Your current results are unchanged. Please try again.');
+            }
+            const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const results = page.getElementById('analysis-results');
+            if (!results) {
+                throw new Error('Unable to read updated results. Please try again.');
+            }
+            document.getElementById('analysis-results').innerHTML = results.innerHTML;
+            analysisStatus.textContent = 'Analysis updated with the latest available database results at ' + new Date().toLocaleTimeString() + '.';
+        } catch (error) {
+            analysisStatus.textContent = error.message;
+        } finally {
+            updateButton.disabled = false;
+        }
+    });
     const pullButton = document.getElementById('pull-data');
     const pullStatus = document.getElementById('pull-status');
     const pullProgress = document.getElementById('pull-progress');
