@@ -7,6 +7,11 @@ import psycopg
 from psycopg import OperationalError
 from psycopg import sql
 
+if __package__:
+    from .db_config import get_db_settings
+else:
+    from db_config import get_db_settings
+
 # connect to the database 
 
 def create_connection(db_name, db_user, db_password, db_host, db_port):
@@ -143,7 +148,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load applicant records into PostgreSQL.")
     parser.add_argument("--file-path", type=Path, help="JSON array or JSON Lines input file")
     args = parser.parse_args()
-    connection = create_connection("grad_data", "postgres", "lanie89", "localhost", "54830")
+    connection = create_connection(**get_db_settings())
     if connection is None:
         raise SystemExit(1)
     if connection is not None:

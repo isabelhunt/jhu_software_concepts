@@ -4,6 +4,15 @@ Module 2 Assignment: Web Scraping due on September 13th @11:59 pm
 ### SSH to the github repo ###
 git@github.com:isabelhunt/jhu_software_concepts.git
 
+### Database configuration
+
+Install dependencies with `python -m pip install -r module_3/requirements.txt`.
+For a new checkout, copy `module_3/.env.example` to `module_3/.env` and fill in
+`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, and `DB_PORT` for PostgreSQL.
+The app, ORM queries, SQL queries, and loader share these settings. Existing
+environment variables take precedence over the file. The local `.env` file
+is excluded from Git.
+
 
 ### Part 7: Compare SQL and SQLAlchemy ###
 
@@ -23,4 +32,3 @@ select(func.avg(applicant.gpa)).where(
     applicant.gpa.is_not(None),)
 
 Both SQL and SQLAlchemy can be used to answer the question of "What is the average GPA of American Fall 2026 applicants", and while the result is the same, the approach differs. SQLAlchemy does the same query, but is properly formatted in less lines, which is not necessarily better but has better white space which can improve readability. On the other hand SQL uses key words like "SELECT", "FROM", and "WHERE" which make it extremely easy to read. However, if one has ever coded before, the SQLAlchemy, in my opinion, is also clear and more pythonic. 
-

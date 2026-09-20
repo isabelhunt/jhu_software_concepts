@@ -1,6 +1,11 @@
 import psycopg
 from psycopg import OperationalError
 
+if __package__:
+    from .db_config import get_db_settings
+else:
+    from db_config import get_db_settings
+
 def create_connection(db_name, db_user, db_password, db_host, db_port):
     connection = None
     try:
@@ -193,7 +198,7 @@ def temple_apps(connection):
 
 
 if __name__ == "__main__":
-    connection = create_connection("grad_data", "postgres", "lanie89", "localhost", "54830")
+    connection = create_connection(**get_db_settings())
     if connection is not None:
         with connection:
             fall_26_apps(connection)
