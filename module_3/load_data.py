@@ -1,3 +1,4 @@
+import argparse
 import json
 from datetime import datetime
 from pathlib import Path
@@ -24,16 +25,18 @@ def create_connection(db_name, db_user, db_password, db_host, db_port):
     return connection
 
 def load_data(connection, table_name="applicants", file_path=None):
-    """Load new JSON Lines records with university and program combined."""
+    """Load new JSON array or JSON Lines records with university and program combined."""
     source = (Path(file_path) if file_path is not None else
               Path(__file__).with_name("llm_extend_applicant_data.json"))
     rows = []
     with source.open(encoding="utf-8") as file:
-        for line_number, line in enumerate(file, start=1):
-            if not line.strip():
+        content = file.read()
+        records = json.loads(content) if content.lstrip().startswith("[") else content.splitlines()
+        for line_number, line in enumerate(records, start=1):
+            if isinstance(line, str) and not line.strip():
                 continue
             try:
-                entry = json.loads(line)
+                entry = json.loads(line) if isinstance(line, str) else line
                 date_added = entry.get("date_added")
                 if date_added:
                     date_added = datetime.strptime(date_added, "%b %d, %Y").date()
@@ -137,8 +140,13 @@ def _delete(connection):
             return cursor.rowcount
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Load applicant records into PostgreSQL.")
+    parser.add_argument("--file-path", type=Path, help="JSON array or JSON Lines input file")
+    args = parser.parse_args()
     connection = create_connection("grad_data", "postgres", "lanie89", "localhost", "54830")
+    if connection is None:
+        raise SystemExit(1)
     if connection is not None:
         with connection:       
-            count = load_data(connection)
+            count = load_data(connection, file_path=args.file_path)
             print(f"Loaded {count} records into grad_data.")

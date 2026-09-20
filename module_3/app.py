@@ -1,10 +1,42 @@
-from flask import Flask, render_template
+import fcntl
+from pathlib import Path
+import subprocess
+import sys
+
+from flask import Flask, jsonify, render_template
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from models import connect_db
 import orm_queries
 
 app = Flask(__name__)
+MODULE_DIR = Path(__file__).resolve().parent
+
+
+@app.post('/pull-data')
+def pull_data():
+    # A file lock also prevents overlapping jobs in different Flask workers.
+    # Keep the file in place: unlinking it would allow competing locks.
+    with (MODULE_DIR / '.pull_data.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return jsonify(error="A data pull is already running. Please wait."), 409
+        try:
+            for command in (
+                [sys.executable, str(MODULE_DIR / 'scrape.py')],
+                [sys.executable, str(MODULE_DIR / 'load_data.py'),
+                 '--file-path', str(MODULE_DIR / 'applicant_data.json')],
+            ):
+                subprocess.run(
+                    command, cwd=MODULE_DIR, check=True,
+                    # Keep the lock held if the server stops while a child runs.
+                    pass_fds=(lock.fileno(),),
+                )
+        except (subprocess.CalledProcessError, OSError):
+            app.logger.exception("Data pull failed")
+            return jsonify(error="The data pull failed. Please try again."), 500
+    return jsonify(success=True)
 
 @app.route('/')
 def index():

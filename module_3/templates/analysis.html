@@ -17,6 +17,15 @@
         .comparison { margin-top: 1rem; }
         .error { border-color: #b45309; }
         a { color: #155e75; }
+        .pull-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #d7e0ea; }
+        .pull-controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .pull-controls p { flex: 1 1 260px; margin: 0; color: #475569; }
+        .pull-data { padding: .7rem 1.2rem; border: 0; border-radius: 8px; background: #155e75; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+        .pull-progress { display: block; width: 100%; height: 1rem; accent-color: #155e75; }
+        .pull-progress.completed { accent-color: #15803d; }
+        .pull-data:hover { background: #164e63; }
+        .pull-data:disabled { opacity: .6; cursor: wait; }
+        .pull-data:focus-visible { outline: 3px solid #155e75; outline-offset: 3px; }
     </style>
 </head>
 <body>
@@ -27,12 +36,12 @@
         <p class="error" role="alert">{{ error }}</p>
     {% else %}
         {% set questions = [
-            ('q1', 'Q1 · Fall 2026 applications', 'Number of entries for Fall 2026.', 'count'),
-            ('q4', 'Q4 · American applicant GPA', 'Average reported GPA for American applicants applying for Fall 2026.', 'average'),
-            ('q5', 'Q5 · Fall 2025 acceptance rate', 'Accepted entries as a percentage of all Fall 2025 entries.', 'percent'),
-            ('q8', 'Q8 · Computer Science PhD acceptances', 'Accepted Fall 2026 PhD entries at the selected universities, using the original program field.', 'count'),
-            ('q9', 'Q9 · Acceptances using LLM fields', 'The same criteria as Q8, using the LLM-generated university and program.', 'count'),
-            ('q10', 'Q10 · GRE verbal reporting', 'Entries with a reported GRE verbal score as a percentage of all entries.', 'percent')
+            ('q1', 'Fall 2026 applications', 'Number of entries for Fall 2026.', 'count'),
+            ('q4', 'American applicant GPA', 'Average reported GPA for American applicants applying for Fall 2026.', 'average'),
+            ('q5', 'Fall 2025 acceptance rate', 'Accepted entries as a percentage of all Fall 2025 entries.', 'percent'),
+            ('q8', 'Computer Science PhD acceptances', 'Accepted Fall 2026 PhD entries at the selected universities, using the original program field.', 'count'),
+            ('q9', 'Acceptances using LLM fields', 'Accepted Fall 2026 Computer Science PhD entries at the selected universities, using the LLM-generated university and program.', 'count'),
+            ('q10', 'GRE verbal reporting', 'Entries with a reported GRE verbal score as a percentage of all entries.', 'percent')
         ] %}
         <div class="results">
         {% for key, title, description, kind in questions %}
@@ -45,12 +54,59 @@
         </div>
         <section class="comparison">
             <h2>Original and LLM result comparison</h2>
-            <p>Q8 − Q9: <strong>{{ results.q8 - results.q9 }}</strong> entries.</p>
+            <p>Original count − LLM count: <strong>{{ results.q8 - results.q9 }}</strong> entries.</p>
             <p class="detail">Selected universities: Georgetown University, Massachusetts Institute of Technology (MIT), Stanford University, and Carnegie Mellon University.</p>
             <p class="detail">N/A means there are no qualifying values to calculate an average or percentage.</p>
         </section>
     {% endif %}
     <p><a href="{{ url_for('index') }}">Refresh results</a></p>
+    <section class="pull-section" aria-label="Pull application data">
+        <div class="pull-controls">
+            <button type="button" class="pull-data" id="pull-data" aria-describedby="pull-description">Pull Data</button>
+            <p id="pull-description">Pull Data checks Grad Café for newly submitted application results and adds new records to the database. Depending on the amount of new data available, this may take some time.</p>
+        </div>
+        <p id="pull-status" role="status" aria-live="polite">Ready to pull data.</p>
+        <progress id="pull-progress" class="pull-progress" value="0" max="100" aria-label="Data pull status" aria-describedby="pull-status"></progress>
+    </section>
 </main>
+<script>
+    const pullButton = document.getElementById('pull-data');
+    const pullStatus = document.getElementById('pull-status');
+    const pullProgress = document.getElementById('pull-progress');
+    function showCompleted() {
+        pullStatus.textContent = 'Completed — data pull finished successfully.';
+        pullProgress.value = 100;
+        pullProgress.classList.add('completed');
+    }
+    // Preserve completion feedback through the automatic results refresh.
+    try {
+        if (sessionStorage.getItem('pullDataCompleted') === 'true') {
+            sessionStorage.removeItem('pullDataCompleted');
+            showCompleted();
+        }
+    } catch (_) { /* Storage may be disabled in the browser. */ }
+    pullButton.addEventListener('click', async () => {
+        pullButton.disabled = true;
+        pullStatus.textContent = 'Running — checking Grad Café and loading new records…';
+        pullProgress.classList.remove('completed');
+        pullProgress.removeAttribute('value');
+        try {
+            const response = await fetch({{ url_for('pull_data')|tojson }}, {method: 'POST'});
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'The data pull failed. Please try again.');
+            }
+            showCompleted();
+            try {
+                sessionStorage.setItem('pullDataCompleted', 'true');
+            } catch (_) { /* Completion is still shown before refreshing. */ }
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (error) {
+            pullStatus.textContent = 'Not completed — ' + error.message;
+            pullProgress.value = 0;
+            pullButton.disabled = false;
+        }
+    });
+</script>
 </body>
 </html>
