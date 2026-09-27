@@ -127,23 +127,6 @@ def load_data(connection, table_name="applicants", file_path=None):
             """).format(table), new_rows)
     return len(new_rows)
 
-def print_applicants(connection):
-    """Print the first 100 applicants ordered by p_id, with column headings."""
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM applicants ORDER BY p_id LIMIT 100")
-        print("\t".join(column.name for column in cursor.description))
-        for row in cursor.fetchall():
-            print("\t".join("NULL" if value is None else str(value) for value in row))
-
-
-def _delete(connection):
-    with connection.transaction():
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "DROP TABLE applicants",
-            )
-            return cursor.rowcount
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load applicant records into PostgreSQL.")
     parser.add_argument("--file-path", type=Path, help="JSON array or JSON Lines input file")
