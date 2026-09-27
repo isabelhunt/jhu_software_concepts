@@ -4,3 +4,8 @@ module_2/llm_hosting/models/
 module_3/__pycache__
 Reflection on GradCafe Data.docx
 query_data.docx
+module_4/src/__pycache__
+module_4/tests/__pycache__
+module_4/.pytest_cache
+module_4/ov=src
+
