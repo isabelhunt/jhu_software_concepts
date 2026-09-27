@@ -30,8 +30,7 @@ go to http://localhost:8080/ in any browser
 The Flask layout follows Module 1: `board/__init__.py` creates the app,
 `board/pages.py` defines the routes, `board/templates/base.html` provides
 the shared layout, `board/templates/pages/home.html` displays the analysis,
-and `board/static/styles.css` contains the styles. `app.py` remains a
-compatible entry point.
+and `board/static/styles.css` contains the styles.
 
 The flask webpage loads the data that is queried within orm_queries.py,
 The Pull Data button runs scrape.py, puts the resulting json through llm_hosting/app, and then load_data.py to update applicants database

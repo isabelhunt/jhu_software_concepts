@@ -38,9 +38,21 @@ def test_page_load(page_name, expected_result, client):
     response = client.get(page_name)
     assert response.status_code == expected_result
     html = response.get_data(as_text=True)
+    assert '<button type="button" class="pull-data" id="pull-data" aria-describedby="pull-description">Pull Data</button>' in html
+    assert '<button type="button" class="pull-data" id="update-analysis">Update Analysis</button>' in html
+
+
+@pytest.mark.web
+def test_analysis_and_answer_exist(client):
+    response = client.get("/")
+    html = response.get_data(as_text=True)
+    results = re.findall(r'<p class="value">(.*?)</p>', html, re.DOTALL)
+
     title = re.search(r"<title\b[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
     assert title is not None, "Page is missing a <title> element"
     assert re.search(r"\banalysis\b", title.group(1), re.IGNORECASE), "Page title must include 'analysis'"
-    assert '<button type="button" class="pull-data" id="pull-data" aria-describedby="pull-description">Pull Data</button>' in html
-    assert '<button type="button" class="pull-data" id="update-analysis">Update Analysis</button>' in html
-    
+
+    assert any(
+        re.fullmatch(r"\d+(?:\.\d+)?%?", result.strip())
+        for result in results
+    ), "Expected at least one question to display a numeric result"
