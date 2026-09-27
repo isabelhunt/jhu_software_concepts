@@ -47,7 +47,6 @@ class GradCafeScraper:
 
 def main():
     url = "https://www.thegradcafe.com/survey"
-    num_of_records = 30000
     start_time = time.perf_counter()
 
     """Checks for existing json data"""
@@ -66,9 +65,12 @@ def main():
         finally:
             scraper._close()
         url = next_url
+        num_of_records = len(entries) + 1000
+
     else:
         """If no existing data it starts with an empty list"""
         entries = []
+        num_of_records = 30000
 
     while url and len(entries) < num_of_records:
         """Loop to grab fresh records until it hits num_of_records"""
