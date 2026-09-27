@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from datetime import date
 from pathlib import Path
 
@@ -6,6 +7,64 @@ import pytest
 
 from src.board import create_app, pages
 from src.load_data import load_data
+
+
+@pytest.mark.db
+def test_stored_row_dictionary(mocker, tmp_path):
+    record = {
+        "university": "Example University", "program": "Computer Science",
+        "comments": "Accepted with funding", "date_added": "Sep 20, 2026",
+        "url": "https://example.com/applicants/1", "status": "Accepted",
+        "term": "Fall 2026", "US/International": "American",
+        "GPA": "3.75", "GRE": "325", "GRE V": "160", "GRE AW": "4.5",
+        "Degree": "PhD", "llm-generated-program": "Computer Science",
+        "llm-generated-university": "Example University",
+    }
+    source = tmp_path / "applicants.json"
+    source.write_text(json.dumps([record]), encoding="utf-8")
+    database = sqlite3.connect(":memory:")
+    try:
+        database.execute("""
+            CREATE TABLE applicants (
+                program TEXT, comments TEXT, date_added TEXT, url TEXT,
+                status TEXT, term TEXT, us_or_international TEXT,
+                gpa REAL, gre REAL, gre_v REAL, gre_aw REAL, degree TEXT,
+                llm_generated_program TEXT, llm_generated_university TEXT
+            )
+        """)
+        connection = mocker.MagicMock()
+        cursor = connection.cursor.return_value.__enter__.return_value
+        cursor.__iter__.side_effect = lambda: iter(
+            database.execute("SELECT * FROM applicants").fetchall()
+        )
+
+        def insert_rows(statement, rows):
+            # Adapt PostgreSQL placeholders and dates for the offline database.
+            database.executemany(
+                statement.as_string().replace("%s", "?"),
+                [tuple(value.isoformat() if isinstance(value, date) else value
+                       for value in row) for row in rows],
+            )
+
+        cursor.executemany.side_effect = insert_rows
+        assert load_data(connection, file_path=source) == 1
+
+        database.row_factory = sqlite3.Row
+        stored = database.execute(
+            "SELECT * FROM applicants WHERE url = ?", (record["url"],)
+        ).fetchone()
+        assert stored is not None
+        assert dict(stored) == {
+            "program": "Example University, Computer Science",
+            "comments": "Accepted with funding", "date_added": "2026-09-20",
+            "url": record["url"], "status": "Accepted", "term": "Fall 2026",
+            "us_or_international": "American", "gpa": 3.75,
+            "gre": 325.0, "gre_v": 160.0, "gre_aw": 4.5, "degree": "PhD",
+            "llm_generated_program": "Computer Science",
+            "llm_generated_university": "Example University",
+        }
+    finally:
+        database.close()
 
 
 @pytest.mark.db
