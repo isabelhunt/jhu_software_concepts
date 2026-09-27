@@ -24,6 +24,7 @@
         {% for key, title, description, kind in questions %}
             <article>
                 <h2>{{ title }}</h2>
+                <h3 class="answer-label">Answer:</h3>
                 <p class="value">{% if results[key] is none %}N/A{% elif kind == 'count' %}{{ results[key] }}{% else %}{{ '%.2f'|format(results[key]) }}{% if kind == 'percent' %}%{% endif %}{% endif %}</p>
                 <p class="detail">{{ description }}</p>
             </article>

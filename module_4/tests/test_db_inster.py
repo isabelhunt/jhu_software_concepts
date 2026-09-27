@@ -1,0 +1,143 @@
+import json
+from datetime import date
+from pathlib import Path
+
+import pytest
+
+from src.board import create_app, pages
+from src.load_data import load_data
+
+
+@pytest.mark.db
+@pytest.mark.parametrize("has_url", [True, False], ids=["with-url", "without-url"])
+def test_repeated_pull_does_not_insert_duplicates(
+    monkeypatch, mocker, tmp_path, insertion_db, has_url
+):
+    connection, cursor, rows = insertion_db
+    monkeypatch.setattr(pages, "MODULE_DIR", tmp_path)
+    records = [
+        {
+            "university": "Example University", "program": program,
+            "url": f"https://example.com/applicants/{number}" if has_url else None,
+            "term": "Fall 2026", "GPA": "3.75", "Degree": "PhD",
+        }
+        for number, program in enumerate(["Computer Science", "Mathematics"], start=1)
+    ]
+    # Also include duplicates within a single pull's input.
+    payload = records + records
+    inserted_counts = []
+
+    def fake_run(command, **kwargs):
+        script = Path(command[1]).name
+        if script == "scrape.py":
+            (tmp_path / "applicant_data.json").write_text(json.dumps(payload))
+        elif script == "app.py":
+            Path(command[command.index("--out") + 1]).write_text(json.dumps(payload))
+        elif script == "load_data.py":
+            inserted_counts.append(load_data(
+                connection, file_path=command[command.index("--file-path") + 1]
+            ))
+        else:
+            pytest.fail(f"Unexpected script: {script}")
+
+    mocker.patch.object(pages.subprocess, "run", side_effect=fake_run)
+    app = create_app()
+    app.config["TESTING"] = True
+    client = app.test_client()
+    assert rows == []
+
+    first_response = client.post("/pull-data")
+    assert first_response.status_code == 200
+    assert first_response.get_json() == {"success": True}
+    assert inserted_counts == [2]
+    assert len(rows) == 2
+    original_rows = list(rows)
+
+    second_response = client.post("/pull-data")
+    assert second_response.status_code == 200
+    assert second_response.get_json() == {"success": True}
+    assert inserted_counts == [2, 0]
+    assert rows == original_rows
+    assert cursor.executemany.call_args.args[1] == []
+
+@pytest.fixture()
+def insertion_db(mocker):
+    # Simulate stored rows while exercising the real loader's transformations.
+    rows = []
+    connection = mocker.MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    cursor.__iter__.side_effect = lambda: iter(rows)
+
+    def record_insert(statement, new_rows):
+        assert "INSERT INTO" in statement.as_string()
+        rows.extend(new_rows)
+
+    cursor.executemany.side_effect = record_insert
+    return connection, cursor, rows
+
+
+@pytest.mark.db
+def test_pull_data_inserts_rows(monkeypatch, mocker, tmp_path, insertion_db):
+    connection, cursor, rows = insertion_db
+    monkeypatch.setattr(pages, "MODULE_DIR", tmp_path)
+    records = [
+        {
+            "university": "Example University", "program": "Computer Science",
+            "comments": "Accepted with funding", "date_added": "Sep 20, 2026",
+            "url": f"https://example.com/applicants/{number}",
+            "status": "Accepted", "term": "Fall 2026",
+            "US/International": "American", "GPA": "3.75",
+            "GRE": "325", "GRE V": "160", "GRE AW": "4.5",
+            "Degree": "PhD", "llm-generated-program": "Computer Science",
+            "llm-generated-university": "Example University",
+        }
+        for number in (1, 2)
+    ]
+    inserted_counts = []
+
+    def fake_run(command, **kwargs):
+        script = Path(command[1]).name
+        if script == "scrape.py":
+            (tmp_path / "applicant_data.json").write_text(json.dumps(records))
+        elif script == "app.py":
+            output = Path(command[command.index("--out") + 1])
+            output.write_text(json.dumps(records))
+        elif script == "load_data.py":
+            source = Path(command[command.index("--file-path") + 1])
+            # Run the real loader with a fake database instead of a subprocess.
+            inserted_counts.append(load_data(
+                connection, table_name="applicants",
+                file_path=source,
+            ))
+        else:
+            pytest.fail(f"Unexpected script: {script}")
+
+    mocker.patch.object(pages.subprocess, "run", side_effect=fake_run)
+    assert rows == []
+    cursor.executemany.assert_not_called()
+
+    app = create_app()
+    app.config["TESTING"] = True
+    response = app.test_client().post("/pull-data")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"success": True}
+    assert inserted_counts == [2]
+    cursor.executemany.assert_called_once()
+    assert len(rows) == 2
+    columns = (
+        "program", "comments", "date_added", "url", "status", "term",
+        "us_or_international", "gpa", "gre", "gre_v", "gre_aw", "degree",
+        "llm_generated_program", "llm_generated_university",
+    )
+    for stored_row, record in zip(rows, records):
+        row = dict(zip(columns, stored_row, strict=True))
+        assert row == {
+            "program": "Example University, Computer Science",
+            "comments": "Accepted with funding", "date_added": date(2026, 9, 20),
+            "url": record["url"], "status": "Accepted", "term": "Fall 2026",
+            "us_or_international": "American", "gpa": 3.75,
+            "gre": 325.0, "gre_v": 160.0, "gre_aw": 4.5, "degree": "PhD",
+            "llm_generated_program": "Computer Science",
+            "llm_generated_university": "Example University",
+        }

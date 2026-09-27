@@ -7,6 +7,7 @@ h1 { line-height: 1.2; }
 .results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1rem; }
 article, .comparison, .error { background: white; padding: 1.5rem; border: 1px solid #d7e0ea; border-radius: 12px; }
 h2 { font-size: 1rem; margin: 0; }
+.answer-label { font-size: .85rem; color: #475569; margin: .75rem 0 0; }
 .value { font-size: 2rem; font-weight: 700; color: #155e75; margin: .75rem 0; }
 .detail { font-size: .9rem; color: #475569; margin-bottom: 0; }
 .comparison { margin-top: 1rem; }
