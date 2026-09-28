@@ -9,8 +9,9 @@
 from pathlib import Path
 import sys
 DOCS_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(DOCS_DIR / "src"))
-sys.path.insert(0, str(DOCS_DIR))
+MODULE_DIR = DOCS_DIR.parent
+sys.path.insert(0, str(MODULE_DIR / "src"))
+sys.path.insert(0, str(MODULE_DIR))
 
 project = 'Grad Cafe Analytics Application'
 copyright = '2026, Isabel Hunt'
