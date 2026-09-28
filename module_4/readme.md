@@ -1,59 +1,150 @@
-Isabel Hunt (ihunt5)
-Module 3 Assignment: Database Queries due on September 20th @11:59 pm
+# Module 4: Grad Cafe Analytics
 
-### SSH to the github repo ###
+Isabel Hunt (`ihunt5`)
 
-git@github.com:isabelhunt/jhu_software_concepts.git
+A Flask application for collecting graduate application results and displaying
+analysis. Module 4 includes automated tests, coverage checks, Sphinx documentation,
+and a GitHub Actions workflow.
 
-### Database configuration ###
+To view the full documentation: 
+https://jhu-software-concepts-hunt.readthedocs.io/en/latest/#
 
-Install dependencies with `python -m pip install -r module_3/requirements.txt`.
-For a new checkout, copy `module_3/.env.example` to `module_3/.env` and fill in
-`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, and `DB_PORT` for PostgreSQL.
-The app, ORM queries, SQL queries, and loader share these settings. Existing
-environment variables take precedence over the file. The local `.env` file
-is excluded from Git. 
+All commands below run from `module_4/` unless stated otherwise.
 
-To load the data into a postgreSQL locally hosted database:
-uncomment if __name__ == __main__ block to run directly 
-`python load_data.py`
+## Environment and dependencies
 
-To run the SQL queries:
-uncomment if __name__ == __main__ block to run directly 
-`python query_data.py`
+Create and activate a virtual environment:
 
-To run the SQL Alchemy queries:
-uncomment if __name__ == __main__ block to run directly 
-`python orm_queries.py`
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-To run the Flask webpage:
-`python run.py` (from the `module_3` directory)
-go to http://localhost:8080/ in any browser 
+On Windows, activate with `venv\Scripts\activate` instead.
 
-The Flask layout follows Module 1: `board/__init__.py` creates the app,
-`board/pages.py` defines the routes, `board/templates/base.html` provides
-the shared layout, `board/templates/pages/home.html` displays the analysis,
-and `board/static/styles.css` contains the styles.
+Install application, test, and documentation dependencies together:
 
-The flask webpage loads the data that is queried within orm_queries.py,
-The Pull Data button runs scrape.py, puts the resulting json through llm_hosting/app, and then load_data.py to update applicants database
-The Update Analysis button runs orm_queries.py and refreshes the page 
+```bash
+python -m pip install -r requirements.txt
+```
 
-### Part 7: Compare SQL and SQLAlchemy ###
+This shared file includes the LLM runtime, so CI and documentation builds also
+install its dependencies.
 
-SQL:
-cursor.execute("""
-    SELECT AVG(gpa)
-    FROM applicants
-    WHERE LOWER(TRIM(us_or_international)) = 'american'
-        AND term = 'Fall 2026'
-        AND gpa IS NOT NULL
-""")
+The application uses Unix file locking through `fcntl`; run the Flask app and
+tests on Linux, macOS, or WSL.
 
-SQLAlchemy:
-select(func.avg(applicant.gpa)).where(
-    func.lower(func.trim(applicant.us_or_international)) == "american",
-    applicant.term == "Fall 2026",
-    applicant.gpa.is_not(None),)
+## Database configuration
 
-Both SQL and SQLAlchemy can be used to answer the question of "What is the average GPA of American Fall 2026 applicants", and while the result is the same, the approach differs. SQLAlchemy does the same query, but is properly formatted in less lines, which is not necessarily better but has better white space which can improve readability. On the other hand SQL uses key words like "SELECT", "FROM", and "WHERE" which make it extremely easy to read. However, if one has ever coded before, the SQLAlchemy, in my opinion, is also clear and more pythonic. 
+For the live application, start PostgreSQL and create a database and login.
+Copy the example configuration:
+
+```bash
+cp src/.env.example src/.env
+```
+
+Set all five variables in `src/.env`:
+
+```dotenv
+DB_NAME=your_database
+DB_USER=your_user
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+`src/db_config.py` reads this file. Existing environment variables take precedence,
+and `DB_PORT` must be an integer. Keep real credentials out of version control.
+The analysis page requires an `applicants` table populated with applicant records.
+
+## Run the Flask application
+
+```bash
+python -m src.run
+```
+
+Open <http://localhost:8080/>. The development server runs with debug mode enabled.
+
+- **Pull Data** sends `POST /pull-data`. The route is intended to run the scraper,
+  which calls the cleaner, then LLM enrichment and the database loader. Repeated
+  URLs are skipped; records without URLs are deduplicated by their stored values.
+- **Update Analysis** sends `GET /update-analysis` and recalculates the six
+  displayed answers with the ORM queries. Decimal answers display two places.
+- While a pull holds the lock, another pull or analysis update returns `409`.
+  Failed pulls return `500`; unavailable database analysis returns `503`.
+
+**Current script limitation:** the direct-execution blocks in `scrape.py`,
+`load_data.py`, `query_data.py`, and `orm_queries.py` are commented out. The
+Pull Data route launches scripts as subprocesses, so its live pipeline needs
+those entry points enabled before it can perform the intended work. The loader
+also uses a package-relative import, so direct execution must be reconciled with
+module execution (`python -m src.load_data`). Tests replace the subprocess calls
+and exercise the functions directly; passing tests do not establish that the
+live subprocess entry points work.
+
+After enabling their entry points, run SQL and ORM reports as modules:
+
+```bash
+python -m src.query_data
+python -m src.orm_queries
+```
+
+## Tests and coverage
+
+```bash
+python -m pytest tests --strict-markers
+```
+
+`pytest.ini` measures coverage of `src` and requires **100% coverage**. Tests use
+fake records, mocked external services, and in-memory SQLite databases; the local
+suite does not require PostgreSQL, Chrome, or a running LLM service.
+
+Select a category with `-m`:
+
+| Marker | Coverage area |
+| --- | --- |
+| `web` | Flask app creation, routes, and page content |
+| `buttons` | Pull Data, Update Analysis, busy responses, and failures |
+| `analysis` | Answer labels, decimal formatting, and query output |
+| `db` | Configuration, connections, loading, duplicates, and stored fields |
+| `integration` | Pull and analysis flows using shared fake records |
+
+A subset of tests may not satisfy the full-suite coverage threshold. For a focused
+run without the configured coverage options:
+
+```bash
+python -m pytest tests/test_buttons.py -o addopts='' -q
+```
+
+The tests simulate browser requests with Flask's test client. They do not click
+buttons in an actual browser. SQLite and mocks also do not validate all
+PostgreSQL-specific behavior.
+
+## Documentation
+To view the full documentation: 
+https://jhu-software-concepts-hunt.readthedocs.io/en/latest/#
+
+Sphinx configuration and documentation sources live in `docs/`. Autodoc imports
+application modules from `src/` and renders their Sphinx-style docstrings.
+
+Build HTML documentation and treat warnings as errors:
+
+```bash
+python -m sphinx -b html -W --keep-going docs _build/html
+```
+
+Open `_build/html/index.html` to view the result. Alternatively, use `make html`
+or `make.bat html` with Sphinx installed in the active environment.
+
+Read the Docs uses the repository-root `.readthedocs.yaml`, which points to
+`module_4/docs/conf.py` and installs `module_4/requirements.txt`.
+
+## Continuous integration
+
+The repository-root `.github/workflows/ci.yml` runs on pushes, pull requests, and
+manual dispatch. It starts PostgreSQL 16, waits for its health check, installs
+the shared dependencies, verifies a real connection, creates the test tables, and runs
+pytest with strict marker checking and the configured coverage threshold.
+
+The workflow database uses disposable test credentials. The suite's mocked and
+SQLite tests remain offline even though CI also checks PostgreSQL connectivity.
