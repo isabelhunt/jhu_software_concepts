@@ -1,12 +1,36 @@
 from pathlib import Path
 import json
 import sys
+import subprocess
 from datetime import date
 
 from src import clean
 from src.load_data import load_data
 from src.board import create_app, pages
 import pytest
+
+
+@pytest.mark.buttons
+@pytest.mark.parametrize("error", [
+    subprocess.CalledProcessError(1, ["python", "scrape.py"]),
+    OSError("Unable to start scraper"),
+], ids=["script-failed", "os-error"])
+def test_pull_data_failure(monkeypatch, mocker, tmp_path, error):
+    monkeypatch.setattr(pages, "MODULE_DIR", tmp_path)
+    mock_run = mocker.patch.object(pages.subprocess, "run", side_effect=error)
+    app = create_app()
+    app.config["TESTING"] = True
+    log_exception = mocker.spy(app.logger, "exception")
+
+    response = app.test_client().post("/pull-data")
+
+    assert response.status_code == 500
+    assert response.get_json() == {
+        "error": "The data pull failed. Please try again."
+    }
+    log_exception.assert_called_once_with("Data pull failed")
+    mock_run.assert_called_once()
+    assert pages.pull_is_running() is False
 
 
 @pytest.mark.buttons

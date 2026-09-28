@@ -4,10 +4,41 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from src import db_config
 from src.board import create_app, pages
 from src.load_data import load_data
+
+
+@pytest.mark.db
+@pytest.mark.parametrize("failure_stage", ["connection", "query"])
+def test_analysis_database_error(mocker, failure_stage):
+    connect = mocker.patch.object(pages, "connect_db")
+    mocker.patch.object(pages, "Session")
+    query = mocker.patch.object(pages.orm_queries, "fall_26_apps")
+    error = SQLAlchemyError("Simulated database failure")
+    if failure_stage == "connection":
+        connect.side_effect = error
+    else:
+        query.side_effect = error
+
+    app = create_app()
+    app.config["TESTING"] = True
+    log_exception = mocker.spy(app.logger, "exception")
+    response = app.test_client().get("/")
+
+    assert response.status_code == 503
+    assert response.mimetype == "text/html"
+    html = response.get_data(as_text=True)
+    assert 'role="alert"' in html
+    assert "Applicant data is unavailable. Please try again later." in html
+    assert '<p class="value">' not in html
+    log_exception.assert_called_once_with("Unable to load applicant analysis")
+    if failure_stage == "query":
+        connect.return_value.dispose.assert_called_once_with()
+    else:
+        query.assert_not_called()
 
 
 @pytest.fixture()
