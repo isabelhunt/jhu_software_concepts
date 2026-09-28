@@ -12,25 +12,49 @@ class GradCafeScraper:
     """Scrape and clean a GradCafe survey page."""
 
     def __init__(self, url="https://www.thegradcafe.com/survey"):
+        """Initialize the survey URL, Chrome driver, and HTML history.
+
+        :param str url: Survey page URL to open.
+        :returns: None.
+        :rtype: None
+        :raises selenium.common.exceptions.WebDriverException: Chrome cannot be started.
+        """
         self.url = url
         self.driver = webdriver.Chrome()
         self.html_storage = []
 
     def _open(self):
-        """Use Selenium to open the webpage in Chrome"""
+        """Open the survey page and wait up to ten seconds for table rows.
+
+        :returns: None.
+        :rtype: None
+        :raises selenium.common.exceptions.TimeoutException: No survey row appears in time.
+        :raises selenium.common.exceptions.WebDriverException: Browser navigation fails.
+        """
         self.driver.get(self.url)
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
         )
         
     def scrape_data(self):
-        """Scrape soup object"""
+        """Parse the current page and append its formatted HTML to the history.
+
+        :returns: The parsed browser page source.
+        :rtype: bs4.BeautifulSoup
+        :raises selenium.common.exceptions.WebDriverException: Page source cannot be read.
+        """
         soup = BeautifulSoup(self.driver.page_source, "html.parser")
         self.html_storage.append([soup.prettify()])
         return soup
 
     def _find_next_link(self, soup):
-        """Return the full URL for the Next survey page, if available."""
+        """Find the next cursor-based survey page.
+
+        :param soup: Parsed page to search for a link labeled Next.
+        :type soup: bs4.BeautifulSoup
+        :returns: The absolute next-page URL, or ``None`` when no matching link exists.
+        :rtype: str or None
+        """
         next_link = next(
             (
                 link
@@ -42,10 +66,30 @@ class GradCafeScraper:
         return urljoin(self.url, next_link["href"]) if next_link else None
 
     def _close(self):
-        """Close the browser"""
+        """Quit Chrome and release the browser session.
+
+        :returns: None.
+        :rtype: None
+        :raises selenium.common.exceptions.WebDriverException: The driver cannot quit.
+        """
         self.driver.quit()
 
 def main():
+    """Collect, clean, and save survey records, resuming saved progress.
+
+    Start with a target of 30,000 records, or resume after the last saved page
+    with a target of 1,000 additional records. Stop when pagination ends or the
+    target is reached. A resume-page timeout leaves the file unchanged; a timeout
+    while collecting saves the records collected so far.
+
+    :returns: None.
+    :rtype: None
+    :raises OSError: Saved records cannot be read or written.
+    :raises json.JSONDecodeError: The existing data file is invalid JSON.
+    :raises IndexError: The existing data file contains an empty list.
+    :raises selenium.common.exceptions.WebDriverException: Browser operations fail
+        with an error other than a handled page timeout.
+    """
     url = "https://www.thegradcafe.com/survey"
     start_time = time.perf_counter()
 

@@ -7,14 +7,23 @@ import psycopg
 from psycopg import OperationalError
 from psycopg import sql
 
-if __package__:
-    from .db_config import get_db_settings
-else:
-    from db_config import get_db_settings
+from .db_config import get_db_settings
 
 # connect to the database 
 
 def create_connection(db_name, db_user, db_password, db_host, db_port):
+    """Open a PostgreSQL connection and print its connection status.
+
+    Operational errors are printed and handled without being re-raised.
+
+    :param str db_name: PostgreSQL database name.
+    :param str db_user: Database login name.
+    :param str db_password: Database login password.
+    :param str db_host: Database server hostname or address.
+    :param int db_port: Database server port.
+    :returns: An open connection, or ``None`` if an operational error occurs.
+    :rtype: psycopg.Connection or None
+    """
     connection = None
     try:
         connection = psycopg.connect(
@@ -30,7 +39,23 @@ def create_connection(db_name, db_user, db_password, db_host, db_port):
     return connection
 
 def load_data(connection, table_name="applicants", file_path=None):
-    """Load new JSON array or JSON Lines records with university and program combined."""
+    """Insert new applicant records from a JSON array or JSON Lines file.
+
+    Combine university and program names and convert dates and numeric scores.
+    Skip records with an existing URL; records without URLs are deduplicated by
+    their complete stored values. Perform database changes in one transaction.
+
+    :param connection: Open PostgreSQL connection used for the transaction.
+    :type connection: psycopg.Connection
+    :param str table_name: Destination table name; defaults to ``applicants``.
+    :param file_path: Input path, or ``None`` for the module's enrichment output file.
+    :type file_path: str or pathlib.Path or None
+    :returns: Number of newly inserted records.
+    :rtype: int
+    :raises ValueError: Input JSON or record fields cannot be parsed.
+    :raises OSError: The input file cannot be read.
+    :raises psycopg.Error: Table creation, locking, or insertion fails.
+    """
     source = (Path(file_path) if file_path is not None else
               Path(__file__).with_name("llm_extend_applicant_data.json"))
     rows = []

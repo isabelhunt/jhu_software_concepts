@@ -30,6 +30,16 @@ class applicant(Base):
 
 
 def connect_db():
+    """Create a PostgreSQL engine and verify that it can connect.
+
+    Read settings with :func:`get_db_settings`, build a psycopg URL, and print
+    a success message. Close the verification connection before returning.
+
+    :returns: The engine after a successful connection check.
+    :rtype: sqlalchemy.engine.Engine
+    :raises ValueError: Database settings are missing or invalid.
+    :raises sqlalchemy.exc.SQLAlchemyError: Engine creation or connection fails.
+    """
     settings = get_db_settings()
     url = URL.create(
         "postgresql+psycopg",

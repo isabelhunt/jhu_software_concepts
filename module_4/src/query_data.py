@@ -1,12 +1,21 @@
 import psycopg
 from psycopg import OperationalError
 
-if __package__:
-    from .db_config import get_db_settings
-else:
-    from db_config import get_db_settings
+from .db_config import get_db_settings
 
 def create_connection(db_name, db_user, db_password, db_host, db_port):
+    """Open a PostgreSQL connection and print its connection status.
+
+    Operational errors are printed and handled without being re-raised.
+
+    :param str db_name: PostgreSQL database name.
+    :param str db_user: Database login name.
+    :param str db_password: Database login password.
+    :param str db_host: Database server hostname or address.
+    :param int db_port: Database server port.
+    :returns: An open connection, or ``None`` if an operational error occurs.
+    :rtype: psycopg.Connection or None
+    """
     connection = None
     try:
         connection = psycopg.connect(
@@ -23,6 +32,16 @@ def create_connection(db_name, db_user, db_password, db_host, db_port):
 
 # Q1
 def fall_26_apps(connection):   
+    """Count Fall 2026 applications.
+
+    Print the answer to standard output.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    """
     with connection.cursor() as cursor:
         cursor.execute("SELECT COUNT(term) FROM applicants WHERE term = 'Fall 2026'")
         count = cursor.fetchall()
@@ -30,6 +49,17 @@ def fall_26_apps(connection):
 
 # Q2
 def percent_international(connection):   
+    """Calculate the international percentage among records with reported nationality.
+
+    Print the answer to standard output. Format numeric output to two decimal places.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT ROUND(
@@ -46,6 +76,17 @@ def percent_international(connection):
 
 # Q3
 def average_stats (connection):
+    """Calculate mean GPA and GRE scores, excluding missing values for each score.
+
+    Print the answer to standard output. Format numeric output to two decimal places.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
+    """
     with connection.cursor() as cursor:
         cursor.execute("SELECT AVG(gpa) FROM applicants WHERE gpa IS NOT NULL")
         average_gpa = cursor.fetchone()[0]
@@ -65,6 +106,17 @@ def average_stats (connection):
 
 # Q4
 def average_american_fall_26_gpa(connection):
+    """Calculate mean GPA for American Fall 2026 applicants.
+
+    Print the answer to standard output. Format numeric output to two decimal places.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT AVG(gpa)
@@ -78,6 +130,17 @@ def average_american_fall_26_gpa(connection):
 
 # Q5
 def percent_accepted_fall_25(connection):
+    """Calculate the acceptance percentage for Fall 2025 applications.
+
+    Print the answer to standard output. Format numeric output to two decimal places.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT ROUND(
@@ -94,6 +157,17 @@ def percent_accepted_fall_25(connection):
 
 # Q6
 def average_accepted_fall_26_gpa(connection):
+    """Calculate mean GPA for accepted Fall 2026 applicants.
+
+    Print the answer to standard output. Format numeric output to two decimal places.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT AVG(gpa)
@@ -107,6 +181,16 @@ def average_accepted_fall_26_gpa(connection):
 
 # Q7
 def jhu_comp_sci_masters_count(connection):
+    """Count Johns Hopkins computer science master's applications.
+
+    Print the answer to standard output.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT COUNT(*)
@@ -124,6 +208,17 @@ def jhu_comp_sci_masters_count(connection):
 
 # Q8
 def accepted_fall_26_comp_sci_count(connection):
+    """Count accepted Fall 2026 computer science PhD applications using original fields.
+
+    Print the answer to standard output.
+    Restrict universities to Georgetown, MIT, Stanford, and Carnegie Mellon.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: The matching application count.
+    :rtype: int
+    :raises psycopg.Error: A database query fails.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT COUNT(*)
@@ -146,6 +241,17 @@ def accepted_fall_26_comp_sci_count(connection):
 
 # Q9
 def accepted_fall_26_llm_comp_sci_count(connection):
+    """Count accepted Fall 2026 computer science PhD applications using LLM fields.
+
+    Print the answer to standard output.
+    Restrict universities to Georgetown, MIT, Stanford, and Carnegie Mellon.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: The matching application count.
+    :rtype: int
+    :raises psycopg.Error: A database query fails.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT COUNT(*)
@@ -171,6 +277,17 @@ def accepted_fall_26_llm_comp_sci_count(connection):
 What percentage of students reported a GRE verbal score?
 """
 def percent_reported_gre_v(connection):
+    """Calculate the percentage of all applicants reporting a GRE verbal score.
+
+    Print the answer to standard output. Format numeric output to two decimal places.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT ROUND(
@@ -187,6 +304,16 @@ def percent_reported_gre_v(connection):
 Number of applicants who applied to Temple University 
 """
 def temple_apps(connection):   
+    """Count applications whose program names Temple University.
+
+    Print the answer to standard output.
+
+    :param connection: Open PostgreSQL connection containing the applicants table.
+    :type connection: psycopg.Connection
+    :returns: None; answers are printed to standard output.
+    :rtype: None
+    :raises psycopg.Error: A database query fails.
+    """
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT COUNT(program) 
@@ -196,7 +323,8 @@ def temple_apps(connection):
         count = cursor.fetchall()
         print(f"Temple University Applicant Count: {count[0][0]}")
 
-
+"""
+# Uncomment to run file directly 
 if __name__ == "__main__":
     connection = create_connection(**get_db_settings())
     if connection is not None:
@@ -213,3 +341,4 @@ if __name__ == "__main__":
             print(f"Difference: {original_count - llm_count}")
             percent_reported_gre_v(connection)
             temple_apps(connection)
+"""

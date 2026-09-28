@@ -7,9 +7,140 @@ from pathlib import Path
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from src import clean, db_config
+from src import clean, db_config, models
+from src import load_data as data_loader
 from src.board import create_app, pages
 from src.load_data import load_data
+
+
+@pytest.mark.db
+def test_load_data_skips_blank_json_lines(tmp_path, insertion_db):
+    connection, cursor, rows = insertion_db
+    source = tmp_path / "applicants.jsonl"
+    records = [
+        {"program": "Computer Science", "url": "https://example.com/1"},
+        {"program": "Mathematics", "url": "https://example.com/2"},
+    ]
+    source.write_text(
+        "\n \t\n" + json.dumps(records[0]) + "\n\n  \n" + json.dumps(records[1]) + "\n\n",
+        encoding="utf-8",
+    )
+
+    assert load_data(connection, file_path=source) == 2
+    assert [(row[0], row[3]) for row in rows] == [
+        (record["program"], record["url"]) for record in records
+    ]
+    cursor.executemany.assert_called_once()
+
+
+@pytest.mark.db
+@pytest.mark.parametrize("invalid_line, cause", [
+    ('{"GPA": "invalid"}', ValueError),
+    ('{"GPA": []}', TypeError),
+    ('null', AttributeError),
+    ('{"date_added": "not-a-date"}', ValueError),
+    ('{broken json}', ValueError),
+], ids=["invalid-score", "wrong-score-type", "not-an-object", "invalid-date", "invalid-json"])
+def test_load_data_reports_invalid_record(tmp_path, insertion_db, invalid_line, cause):
+    connection, cursor, rows = insertion_db
+    source = tmp_path / "applicants.jsonl"
+    source.write_text(
+        json.dumps({"program": "Computer Science"}) + "\n\n" + invalid_line + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"^Invalid record on line 3: ") as error:
+        load_data(connection, file_path=source)
+
+    assert isinstance(error.value.__cause__, cause)
+    assert rows == []
+    connection.transaction.assert_not_called()
+    cursor.executemany.assert_not_called()
+
+
+@pytest.mark.db
+def test_connect_db_builds_url_and_returns_engine(mocker, capsys):
+    settings = {
+        "db_name": "test_applicants", "db_user": "test_user",
+        "db_password": "fake:p@ss/word", "db_host": "localhost", "db_port": 5433,
+    }
+    get_settings = mocker.patch.object(models, "get_db_settings", return_value=settings)
+    create_engine = mocker.patch.object(models, "create_engine")
+    engine = create_engine.return_value
+
+    result = models.connect_db()
+
+    get_settings.assert_called_once_with()
+    create_engine.assert_called_once()
+    url = create_engine.call_args.args[0]
+    assert url.drivername == "postgresql+psycopg"
+    assert url.username == settings["db_user"]
+    assert url.password == settings["db_password"]
+    assert url.host == settings["db_host"]
+    assert url.port == settings["db_port"]
+    assert url.database == settings["db_name"]
+    engine.connect.assert_called_once_with()
+    engine.connect.return_value.__enter__.assert_called_once_with()
+    engine.connect.return_value.__exit__.assert_called_once_with(None, None, None)
+    assert result is engine
+    assert capsys.readouterr().out == "Connection was successful\n"
+
+    connect = mocker.patch.object(data_loader.psycopg, "connect")
+    result = data_loader.create_connection(**settings)
+    connect.assert_called_once_with(
+        dbname=settings["db_name"], user=settings["db_user"],
+        password=settings["db_password"], host=settings["db_host"],
+        port=settings["db_port"],
+    )
+    assert result is connect.return_value
+    assert capsys.readouterr().out == "Connection to PostgreSQL DB successful\n"
+
+    connect.side_effect = data_loader.OperationalError("Simulated connection failure")
+    assert data_loader.create_connection(**settings) is None
+    assert capsys.readouterr().out == "The error 'Simulated connection failure' occurred\n"
+
+
+@pytest.mark.db
+def test_scrape_timeout_saves_collected_entries(monkeypatch, mocker, tmp_path, capsys):
+    monkeypatch.setitem(sys.modules, "clean", clean)
+    from src import scrape
+
+    monkeypatch.setattr(clean, "__file__", str(tmp_path / "clean.py"))
+    first_driver = mocker.Mock()
+    first_driver.page_source = """
+        <table><tbody>
+        <tr><td>Stanford University</td><td>Computer Science<br>PhD</td>
+            <td>Sep 20, 2026</td><td>Accepted</td>
+            <td><a href="/result/101">Details</a></td></tr>
+        <tr><td colspan="5">Fall 2026 American GPA 3.75</td></tr>
+        </tbody></table>
+        <a href="/survey?cursor=next">Next</a>
+    """
+    timeout_driver = mocker.Mock()
+    chrome = mocker.patch.object(
+        scrape.webdriver, "Chrome", side_effect=[first_driver, timeout_driver]
+    )
+    wait = mocker.patch.object(scrape, "WebDriverWait")
+    wait.return_value.until.side_effect = [True, scrape.TimeoutException("Simulated timeout")]
+    save = mocker.spy(scrape, "save_data")
+    cleaner = mocker.spy(scrape, "clean_data")
+
+    scrape.main()
+
+    stored = json.loads((tmp_path / "applicant_data.json").read_text())
+    assert len(stored) == 1
+    assert stored[0]["url"] == "https://www.thegradcafe.com/result/101"
+    assert stored[0]["program"] == "Computer Science"
+    assert stored[0]["GPA"] == "3.75"
+    save.assert_called_once_with(stored)
+    cleaner.assert_called_once()
+    assert chrome.call_count == 2
+    timeout_driver.get.assert_called_once_with("https://www.thegradcafe.com/survey?cursor=next")
+    first_driver.quit.assert_called_once_with()
+    timeout_driver.quit.assert_called_once_with()
+    output = capsys.readouterr().out
+    assert "Page load timed out. Saving collected entries." in output
+    assert "You have reached" not in output
 
 
 @pytest.mark.db

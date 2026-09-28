@@ -4,7 +4,16 @@ from pathlib import Path
 
 
 def clean_data(soup, source_page_url):
-    """Return soup as a list of dictionaries with cleaned field values."""
+    """Extract and normalize applicant records from survey HTML.
+
+    :param soup: Parsed survey page containing result and detail rows.
+    :type soup: bs4.BeautifulSoup
+    :param str source_page_url: Survey page URL recorded on each result.
+    :returns: Applicant dictionaries containing extracted fields and source text.
+    :rtype: list[dict]
+    :raises AttributeError: A result row has no recognized decision.
+    :raises TypeError: A result row has no result link.
+    """
     entries = []
     rows = soup.find_all("tr")
 
@@ -85,18 +94,36 @@ def clean_data(soup, source_page_url):
     return entries
 
 def save_data(data):
-    """Save entry data as JSON"""
+    """Write applicant records to applicant_data.json beside this module.
+
+    :param data: JSON-serializable applicant records to save.
+    :type data: list[dict]
+    :returns: None.
+    :rtype: None
+    :raises OSError: The output file cannot be written.
+    :raises TypeError: A value cannot be serialized as JSON.
+    """
     output_file = Path(__file__).with_name("applicant_data.json")
     with output_file.open("w", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
 
 def load_data():
-    """Return the entries already saved in applicant_data.json."""
+    """Read applicant_data.json from beside this module.
+
+    :returns: The decoded applicant records.
+    :rtype: list[dict]
+    :raises OSError: The file cannot be read.
+    :raises json.JSONDecodeError: The file does not contain valid JSON.
+    """
     output_file = Path(__file__).with_name("applicant_data.json")
     with output_file.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 def _json_file_exists():
-    """Return whether applicant_data.json exists beside this module."""
+    """Check whether applicant_data.json exists beside this module.
+
+    :returns: Whether the data path exists.
+    :rtype: bool
+    """
     output_file = Path(__file__).with_name("applicant_data.json")
     return output_file.exists()
