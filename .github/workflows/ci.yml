@@ -1,0 +1,59 @@
+name: Module 4 tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: module_4
+    env:
+      DB_NAME: applicants_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: applicants_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d applicants_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: module_4/requirements-test.txt
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-test.txt
+      - name: Verify PostgreSQL and create test tables
+        run: |
+          python - <<'PY'
+          from src.models import Base, connect_db
+
+          engine = connect_db()
+          try:
+              Base.metadata.create_all(engine)
+          finally:
+              engine.dispose()
+          PY
+      - name: Run test suite and coverage checks
+        run: python -m pytest tests --strict-markers
