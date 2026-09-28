@@ -1,14 +1,70 @@
 import json
 import sqlite3
+import sys
 from datetime import date
 from pathlib import Path
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from src import db_config
+from src import clean, db_config
 from src.board import create_app, pages
 from src.load_data import load_data
+
+
+@pytest.mark.db
+@pytest.mark.parametrize("timeout", [False, True], ids=["resume", "timeout"])
+def test_scrape_resumes_existing_json(monkeypatch, mocker, tmp_path, capsys, timeout):
+    monkeypatch.setitem(sys.modules, "clean", clean)
+    from src import scrape
+
+    monkeypatch.setattr(clean, "__file__", str(tmp_path / "clean.py"))
+    saved_url = "https://www.thegradcafe.com/survey?cursor=old"
+    next_url = "https://www.thegradcafe.com/survey?cursor=new"
+    existing = [{"url": "https://www.thegradcafe.com/result/100",
+                 "program": "Mathematics", "source_page_url": saved_url}]
+    source = tmp_path / "applicant_data.json"
+    source.write_text(json.dumps(existing), encoding="utf-8")
+    original = source.read_bytes()
+    saved_driver = mocker.Mock()
+    saved_driver.page_source = '<a href="/survey?cursor=new">Next</a>'
+    next_driver = mocker.Mock()
+    next_driver.page_source = """
+        <table><tbody>
+        <tr><td>Stanford University</td><td>Computer Science<br>PhD</td>
+            <td>Sep 20, 2026</td><td>Accepted</td>
+            <td><a href="/result/101">Details</a></td></tr>
+        <tr><td colspan="5">Fall 2026 American GPA 3.75</td></tr>
+        </tbody></table>
+    """
+    chrome = mocker.patch.object(scrape.webdriver, "Chrome", side_effect=[saved_driver, next_driver])
+    wait = mocker.patch.object(scrape, "WebDriverWait")
+    if timeout:
+        wait.return_value.until.side_effect = scrape.TimeoutException("Simulated timeout")
+    save = mocker.spy(scrape, "save_data")
+
+    scrape.main()
+
+    saved_driver.get.assert_called_once_with(saved_url)
+    saved_driver.quit.assert_called_once_with()
+    if timeout:
+        assert source.read_bytes() == original
+        assert "Page load timed out. No new entries to save." in capsys.readouterr().out
+        save.assert_not_called()
+        assert chrome.call_count == 1
+        next_driver.get.assert_not_called()
+    else:
+        next_driver.get.assert_called_once_with(next_url)
+        next_driver.quit.assert_called_once_with()
+        assert chrome.call_count == 2
+        save.assert_called_once()
+        stored = json.loads(source.read_text())
+        assert len(stored) == 2
+        assert stored[0] == existing[0]
+        assert stored[1]["url"] == "https://www.thegradcafe.com/result/101"
+        assert stored[1]["source_page_url"] == next_url
+        assert stored[1]["program"] == "Computer Science"
+        assert stored[1]["GPA"] == "3.75"
 
 
 @pytest.mark.db
