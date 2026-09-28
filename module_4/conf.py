@@ -6,9 +6,11 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import os
+from pathlib import Path
 import sys
-sys.path.insert(0, os.path.abspath("./src"))
+DOCS_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(DOCS_DIR / "src"))
+sys.path.insert(0, str(DOCS_DIR))
 
 project = 'Grad Cafe Analytics Application'
 copyright = '2026, Isabel Hunt'
@@ -21,7 +23,7 @@ release = '9/27/2026'
 extensions = ['sphinx.ext.autodoc']
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'venv', '.venv', 'Thumbs.db', '.DS_Store']
 
 
 

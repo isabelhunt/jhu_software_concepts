@@ -6,14 +6,50 @@
 Grad Cafe Analytics Application documentation
 =============================================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+API documentation for scraping, cleaning, storing, and analyzing applicant data.
 
-.. automodule:: add
+Scraping
+--------
+
+.. automodule:: src.scrape
+   :members:
+
+Cleaning
+--------
+
+.. automodule:: src.clean
+   :members:
+
+Database configuration
+----------------------
+
+.. automodule:: src.db_config
+   :members:
+
+Loading data
+------------
+
+.. automodule:: src.load_data
+   :members:
+
+Database models
+---------------
+
+.. automodule:: src.models
+   :members:
+
+SQL queries
+-----------
+
+.. automodule:: src.query_data
+   :members:
+
+ORM queries
+-----------
+
+.. automodule:: src.orm_queries
    :members:
    
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
