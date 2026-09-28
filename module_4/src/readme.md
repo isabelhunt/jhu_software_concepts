@@ -15,12 +15,15 @@ environment variables take precedence over the file. The local `.env` file
 is excluded from Git. 
 
 To load the data into a postgreSQL locally hosted database:
+uncomment if __name__ == __main__ block to run directly 
 `python load_data.py`
 
 To run the SQL queries:
+uncomment if __name__ == __main__ block to run directly 
 `python query_data.py`
 
 To run the SQL Alchemy queries:
+uncomment if __name__ == __main__ block to run directly 
 `python orm_queries.py`
 
 To run the Flask webpage:

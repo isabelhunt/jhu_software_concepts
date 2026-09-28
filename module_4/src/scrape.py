@@ -95,5 +95,8 @@ def main():
     end_time = time.perf_counter()
     print(f"Run time: {end_time - start_time}")
 
+"""
+# uncomment to run directly in terminal
 if __name__ == "__main__":
     main()
+"""

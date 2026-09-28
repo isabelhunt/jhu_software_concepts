@@ -99,6 +99,8 @@ def percent_reported_gre_v(session):
     return percentage
 
 
+""" 
+# Uncomment to run file directly 
 if __name__ == "__main__":
     db=connect_db() #establish connection
     Session = sessionmaker(bind=db)
@@ -110,3 +112,4 @@ if __name__ == "__main__":
         llm_count = accepted_fall_26_llm_comp_sci_count(session)
         print(f"Difference: {original_count - llm_count}")
         percent_reported_gre_v(session)
+"""

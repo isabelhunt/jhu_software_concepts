@@ -127,6 +127,8 @@ def load_data(connection, table_name="applicants", file_path=None):
             """).format(table), new_rows)
     return len(new_rows)
 
+"""
+# Uncomment to run file directly 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load applicant records into PostgreSQL.")
     parser.add_argument("--file-path", type=Path, help="JSON array or JSON Lines input file")
@@ -138,3 +140,4 @@ if __name__ == "__main__":
         with connection:       
             count = load_data(connection, file_path=args.file_path)
             print(f"Loaded {count} records into grad_data.")
+"""

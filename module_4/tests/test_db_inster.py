@@ -5,8 +5,64 @@ from pathlib import Path
 
 import pytest
 
+from src import db_config
 from src.board import create_app, pages
 from src.load_data import load_data
+
+
+@pytest.fixture()
+def isolated_db_env(monkeypatch, tmp_path):
+    # Run the real dotenv loader without reading or changing local credentials.
+    monkeypatch.setattr(db_config, "__file__", str(tmp_path / "db_config.py"))
+    names = {"DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT",
+             "PYTHON_DOTENV_DISABLED"}
+    monkeypatch.setattr(db_config.os, "environ", {
+        key: value for key, value in db_config.os.environ.items() if key not in names
+    })
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        'DB_NAME=test_applicants\nDB_USER=test_user\n'
+        'DB_PASSWORD="fake password"\nDB_HOST=localhost\nDB_PORT=5433\n',
+        encoding="utf-8",
+    )
+    return env_file
+
+
+@pytest.mark.db
+def test_get_db_settings_loads_dotenv(isolated_db_env, mocker):
+    loader = mocker.spy(db_config, "load_dotenv")
+
+    assert db_config.get_db_settings() == {
+        "db_name": "test_applicants", "db_user": "test_user",
+        "db_password": "fake password", "db_host": "localhost", "db_port": 5433,
+    }
+    loader.assert_called_once_with(isolated_db_env)
+
+
+@pytest.mark.db
+def test_get_db_settings_prefers_environment(isolated_db_env, monkeypatch):
+    monkeypatch.setenv("DB_NAME", "environment_database")
+    monkeypatch.setenv("DB_PORT", "6543")
+    settings = db_config.get_db_settings()
+    assert settings["db_name"] == "environment_database"
+    assert settings["db_port"] == 6543
+    assert settings["db_user"] == "test_user"
+
+
+@pytest.mark.db
+def test_get_db_settings_reports_missing_values(isolated_db_env):
+    isolated_db_env.write_text("DB_HOST=localhost\nDB_PORT=5432\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=(
+        r"^Missing database settings: DB_NAME, DB_USER, DB_PASSWORD$"
+    )):
+        db_config.get_db_settings()
+
+
+@pytest.mark.db
+def test_get_db_settings_rejects_invalid_port(isolated_db_env, monkeypatch):
+    monkeypatch.setenv("DB_PORT", "not-a-number")
+    with pytest.raises(ValueError, match="invalid literal for int"):
+        db_config.get_db_settings()
 
 
 @pytest.mark.db
