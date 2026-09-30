@@ -119,7 +119,7 @@ def load_data():
     with output_file.open("r", encoding="utf-8") as file:
         return json.load(file)
 
-def _json_file_exists():
+def json_file_exists():
     """Check whether applicant_data.json exists beside this module.
 
     :returns: Whether the data path exists.

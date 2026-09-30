@@ -16,7 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 
-from clean import clean_data, save_data, load_data, _json_file_exists
+from clean import clean_data, save_data, load_data, json_file_exists
 
 class GradCafeScraper:
     """Scrape and clean a GradCafe survey page."""
@@ -52,22 +52,22 @@ class GradCafeScraper:
         try:
             while self.url and len(self.entries) < self.num_of_records:
                 try:
-                    self._open()
-                    soup = BeautifulSoup(
-                        self.driver.page_source, "html.parser"
-                    )
-                    next_url = self.find_next_link(soup)
+                    soup = self.get_soup()
                 except TimeoutException:
                     print("Page load timed out. Returning collected entries.")
                     break
-
+                next_url = self.find_next_link(soup)
                 self.entries.extend(clean_data(soup, self.url))
                 self.url = next_url
-
             return self.entries
         finally:
-            self._close()
-            
+            self.close()
+
+    def get_soup(self):
+        """Load and parse a page, allowing load errors to reach the caller."""
+        self._open()
+        return BeautifulSoup(self.driver.page_source, "html.parser")
+
     def find_next_link(self, soup):
         """Find the next cursor-based survey page.
 
@@ -76,17 +76,17 @@ class GradCafeScraper:
         :returns: The absolute next-page URL, or ``None`` when no matching link exists.
         :rtype: str or None
         """
-        next_link = next(
-            (
-                link
-                for link in soup.find_all("a", href=True)
-                if link.get_text(strip=True).lower() == "next" and "cursor=" in link["href"]
-            ),
-            None,
-        )
-        return urljoin(self.url, next_link["href"]) if next_link else None
+        next_url = next(
+                    (
+                        link
+                        for link in soup.find_all("a", href=True)
+                        if link.get_text(strip=True).lower() == "next" and "cursor=" in link["href"]
+                    ),
+                    None,
+                )
+        return urljoin(self.url, next_url["href"]) if next_url else None
 
-    def _close(self):
+    def close(self):
         """Quit Chrome and release the browser session.
 
         :returns: None.
@@ -107,18 +107,24 @@ def main():
     :rtype: None
     :raises OSError: Saved records cannot be read or written.
     :raises json.JSONDecodeError: The existing data file is invalid JSON.
-    :raises IndexError: The existing data file contains an empty list.
     :raises selenium.common.exceptions.WebDriverException: Browser operations fail
         with an error other than a handled page timeout.
     """
     start_time = time.perf_counter()
 
-    if _json_file_exists():
-        entries = load_data()
-        print(entries[-1])
-        last_url = entries[-1].get("source_page_url")
-        current_stored_records = len(entries)
-        scraper = GradCafeScraper(url=last_url, num_of_records=(current_stored_records + 1000))
+    entries = load_data() if json_file_exists() else []
+    if entries:
+        old_url = entries[-1].get("source_page_url")
+        target = len(entries) + 1000
+        last_scrape = GradCafeScraper(url=old_url, num_of_records=target)
+        try:
+            new_url = last_scrape.find_next_link(last_scrape.get_soup())
+        except TimeoutException:
+            print("Page load timed out. No new entries to save.")
+            return
+        finally:
+            last_scrape.close()
+        scraper = GradCafeScraper(url=new_url, num_of_records=target)
         scraper.entries = entries
         entries = scraper.scrape_data()
     else:
