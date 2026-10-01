@@ -1,3 +1,7 @@
+"""This module is used to load the database env variables from the user's 
+local environemnt file. This is then passed to a connect db function 
+"""
+
 import os
 from pathlib import Path
 
