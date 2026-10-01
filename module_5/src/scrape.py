@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 
 from clean import clean_data, save_data, load_data, json_file_exists
 
+
 class GradCafeScraper:
     """Scrape and clean a GradCafe survey page."""
 

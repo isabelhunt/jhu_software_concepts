@@ -15,6 +15,7 @@ from psycopg import sql
 
 from db_config import get_db_settings
 
+
 def create_connection(db_name, db_user, db_password, db_host, db_port):
     """Open a PostgreSQL connection and print its connection status.
 

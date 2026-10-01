@@ -148,3 +148,16 @@ pytest with strict marker checking and the configured coverage threshold.
 
 The workflow database uses disposable test credentials. The suite's mocked and
 SQLite tests remain offline even though CI also checks PostgreSQL connectivity.
+
+## Pylint
+I ran each module thorugh the linter individually as follows:
+```bash
+pylint clean.py
+pylint db_config.py
+pylint load_data.py
+pylint models.py
+pylint orm_queries.py
+pylint query_data.py
+pylint run.py
+pylint scrape.py
+```

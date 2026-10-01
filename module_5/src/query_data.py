@@ -1,7 +1,9 @@
+"""This module uses SQL to analyze GradCafe graduate acceptace data """
 import psycopg
 from psycopg import OperationalError
 
-from .db_config import get_db_settings
+from db_config import get_db_settings
+
 
 def create_connection(db_name, db_user, db_password, db_host, db_port):
     """Open a PostgreSQL connection and print its connection status.
@@ -31,7 +33,7 @@ def create_connection(db_name, db_user, db_password, db_host, db_port):
     return connection
 
 # Q1
-def fall_26_apps(connection):   
+def fall_26_apps(connection):
     """Count Fall 2026 applications.
 
     Print the answer to standard output.
@@ -48,7 +50,7 @@ def fall_26_apps(connection):
         print(f"Fall 2026 applicant count: {count[0][0]}")
 
 # Q2
-def percent_international(connection):   
+def percent_international(connection):
     """Calculate the international percentage among records with reported nationality.
 
     Print the answer to standard output. Format numeric output to two decimal places.
@@ -273,9 +275,6 @@ def accepted_fall_26_llm_comp_sci_count(connection):
         return count
 
 #Q10
-"""
-What percentage of students reported a GRE verbal score?
-"""
 def percent_reported_gre_v(connection):
     """Calculate the percentage of all applicants reporting a GRE verbal score.
 
@@ -300,10 +299,7 @@ def percent_reported_gre_v(connection):
         print(f"Percent reporting GRE verbal: {percentage:.2f}%")
 
 #Q11
-"""
-Number of applicants who applied to Temple University 
-"""
-def temple_apps(connection):   
+def temple_apps(connection):
     """Count applications whose program names Temple University.
 
     Print the answer to standard output.
@@ -323,22 +319,19 @@ def temple_apps(connection):
         count = cursor.fetchall()
         print(f"Temple University Applicant Count: {count[0][0]}")
 
-"""
-# Uncomment to run file directly 
 if __name__ == "__main__":
-    connection = create_connection(**get_db_settings())
-    if connection is not None:
-        with connection:
-            fall_26_apps(connection)
-            percent_international(connection)
-            average_stats(connection)
-            average_american_fall_26_gpa(connection)
-            percent_accepted_fall_25(connection)
-            average_accepted_fall_26_gpa(connection)
-            jhu_comp_sci_masters_count(connection)
-            original_count = accepted_fall_26_comp_sci_count(connection)
-            llm_count = accepted_fall_26_llm_comp_sci_count(connection)
+    db_connection = create_connection(**get_db_settings())
+    if db_connection is not None:
+        with db_connection:
+            fall_26_apps(db_connection)
+            percent_international(db_connection)
+            average_stats(db_connection)
+            average_american_fall_26_gpa(db_connection)
+            percent_accepted_fall_25(db_connection)
+            average_accepted_fall_26_gpa(db_connection)
+            jhu_comp_sci_masters_count(db_connection)
+            original_count = accepted_fall_26_comp_sci_count(db_connection)
+            llm_count = accepted_fall_26_llm_comp_sci_count(db_connection)
             print(f"Difference: {original_count - llm_count}")
-            percent_reported_gre_v(connection)
-            temple_apps(connection)
-"""
+            percent_reported_gre_v(db_connection)
+            temple_apps(db_connection)

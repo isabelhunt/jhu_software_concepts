@@ -1,11 +1,13 @@
+"""This module utilized SQLalchemy ORM to complete an anaylisis on 
+GradCafe sourced graduate school acceptance data the data is housed
+in a SQLalchemy ORM model"""
+
 from decimal import Decimal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import sessionmaker
-if __package__:
-    from .models import applicant, connect_db
-else:
-    from models import applicant, connect_db
+from sqlalchemy.sql.functions import count as sql_count
+from models import Applicant
 
 
 # Q1
@@ -21,7 +23,7 @@ def fall_26_apps(session):
     :raises sqlalchemy.exc.SQLAlchemyError: The database query fails.
     """
     count = session.scalar(
-        select(func.count(applicant.term)).where(applicant.term == "Fall 2026")
+        select(sql_count(Applicant.term)).where(Applicant.term == "Fall 2026")
     )
     print(f"Fall 2026 applicant count: {count}")
     return count
@@ -41,10 +43,10 @@ def average_american_fall_26_gpa(session):
     :raises sqlalchemy.exc.SQLAlchemyError: The database query fails.
     """
     average_gpa = session.scalar(
-        select(func.avg(applicant.gpa)).where(
-            func.lower(func.trim(applicant.us_or_international)) == "american",
-            applicant.term == "Fall 2026",
-            applicant.gpa.is_not(None),
+        select(func.avg(Applicant.gpa)).where(
+            func.lower(func.trim(Applicant.us_or_international)) == "american",
+            Applicant.term == "Fall 2026",
+            Applicant.gpa.is_not(None),
         )
     )
     result = "N/A" if average_gpa is None else f"{average_gpa:.2f}"
@@ -65,11 +67,11 @@ def percent_accepted_fall_25(session):
     :rtype: float or decimal.Decimal or None
     :raises sqlalchemy.exc.SQLAlchemyError: The database query fails.
     """
-    accepted = func.count().filter(func.lower(func.trim(applicant.status)) == "accepted")
+    accepted = sql_count().filter(func.lower(func.trim(Applicant.status)) == "accepted")
     percentage = session.scalar(
         select(func.round(
-            Decimal("100.0") * accepted / func.nullif(func.count(), 0), 2
-        )).select_from(applicant).where(applicant.term == "Fall 2025")
+            Decimal("100.0") * accepted / func.nullif(sql_count(), 0), 2
+        )).select_from(Applicant).where(Applicant.term == "Fall 2025")
     )
     result = "N/A" if percentage is None else f"{percentage:.2f}%"
     print(f"Fall 2025 acceptance percentage: {result}")
@@ -109,12 +111,12 @@ def accepted_fall_26_comp_sci_count(session):
     :raises sqlalchemy.exc.SQLAlchemyError: The database query fails.
     """
     count = session.scalar(
-        select(func.count()).select_from(applicant).where(
-            applicant.term == "Fall 2026",
-            func.lower(func.trim(applicant.status)) == "accepted",
-            func.lower(func.trim(applicant.degree)) == "phd",
-            func.lower(applicant.program).like("%computer science%"),
-            _selected_university(applicant.program),
+        select(sql_count()).select_from(Applicant).where(
+            Applicant.term == "Fall 2026",
+            func.lower(func.trim(Applicant.status)) == "accepted",
+            func.lower(func.trim(Applicant.degree)) == "phd",
+            func.lower(Applicant.program).like("%computer science%"),
+            _selected_university(Applicant.program),
         )
     )
     print(f"Original Field Count: {count}")
@@ -135,12 +137,12 @@ def accepted_fall_26_llm_comp_sci_count(session):
     :raises sqlalchemy.exc.SQLAlchemyError: The database query fails.
     """
     count = session.scalar(
-        select(func.count()).select_from(applicant).where(
-            applicant.term == "Fall 2026",
-            func.lower(func.trim(applicant.status)) == "accepted",
-            func.lower(func.trim(applicant.degree)) == "phd",
-            func.lower(applicant.llm_generated_program).like("%computer science%"),
-            _selected_university(applicant.llm_generated_university),
+        select(sql_count()).select_from(Applicant).where(
+            Applicant.term == "Fall 2026",
+            func.lower(func.trim(Applicant.status)) == "accepted",
+            func.lower(func.trim(Applicant.degree)) == "phd",
+            func.lower(Applicant.llm_generated_program).like("%computer science%"),
+            _selected_university(Applicant.llm_generated_university),
         )
     )
     print(f"llm Field Count: {count}")
@@ -162,26 +164,23 @@ def percent_reported_gre_v(session):
     """
     percentage = session.scalar(
         select(func.round(
-            Decimal("100.0") * func.count(applicant.gre_v)
-            / func.nullif(func.count(), 0), 2
-        )).select_from(applicant)
+            Decimal("100.0") * sql_count(Applicant.gre_v)
+            / func.nullif(sql_count(), 0), 2
+        )).select_from(Applicant)
     )
     result = "N/A" if percentage is None else f"{percentage:.2f}%"
     print(f"Percent reporting GRE verbal: {result}")
     return percentage
 
 
-""" 
-# Uncomment to run file directly 
 if __name__ == "__main__":
-    db=connect_db() #establish connection
-    Session = sessionmaker(bind=db)
-    with Session() as session:
-        fall_26_apps(session)
-        average_american_fall_26_gpa(session)
-        percent_accepted_fall_25(session)
-        original_count = accepted_fall_26_comp_sci_count(session)
-        llm_count = accepted_fall_26_llm_comp_sci_count(session)
+    db=Applicant.connect_db() #establish connection
+    new_session = sessionmaker(bind=db)
+    with new_session() as db_session:
+        fall_26_apps(db_session)
+        average_american_fall_26_gpa(db_session)
+        percent_accepted_fall_25(db_session)
+        original_count = accepted_fall_26_comp_sci_count(db_session)
+        llm_count = accepted_fall_26_llm_comp_sci_count(db_session)
         print(f"Difference: {original_count - llm_count}")
-        percent_reported_gre_v(session)
-"""
+        percent_reported_gre_v(db_session)
