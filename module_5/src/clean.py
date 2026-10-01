@@ -1,6 +1,122 @@
+"""Data cleaning methods to be used in the scrape module
+
+This module has methods clean_data, save_data, load_data, and 
+jason_file_exists to be used withing the scrape.py module to 
+aid in the scraping and storing of GradCafe data """
+
 import re
 import json
 from pathlib import Path
+
+
+def extract_details(detail_text):
+    """Extract the application term and applicant origin.
+
+    :param str detail_text: Combined text from a result's detail rows.
+    :returns: Term and origin fields, with ``None`` for missing values.
+    :rtype: dict[str, str | None]
+    """
+    entry = {}
+    season_match = re.search(
+        r"\b(?:Fall|Spring|Summer|Winter) \d{4}\b", detail_text
+    )
+    us_intl_match = re.search(
+        r"\b(?:American|International|Other)\b", detail_text
+    )
+    entry["term"] = season_match.group() if season_match else None
+    entry["US/International"] = (
+        us_intl_match.group() if us_intl_match else None
+    )
+    return entry
+
+
+def extract_decision(decision_text):
+    """Extract the decision status and acceptance or rejection date.
+
+    :param str decision_text: Text from the result's decision cell.
+    :returns: Lowercase status and date fields. Missing dates are ``None``.
+    :rtype: dict[str, str | None]
+    :raises AttributeError: The text contains no recognized decision.
+    """
+    entry = {"accepted_date": None, "rejected_date": None}
+    decision_match = re.search(
+        r"\b(Accepted|Rejected|Wait listed|Interview|Pending)\b",
+        decision_text,
+        re.IGNORECASE,
+    )
+    decision_date_match = re.search(
+        r"\bon\s+([A-Z][a-z]{2}\s+\d{1,2}(?:,\s*\d{4})?)\b",
+        decision_text,
+    )
+    entry["status"] = decision_match.group(1).lower()
+    if decision_match:
+        if entry["status"] == "accepted" and decision_date_match:
+            entry["accepted_date"] = decision_date_match.group(1)
+        elif entry["status"] == "rejected" and decision_date_match:
+            entry["rejected_date"] = decision_date_match.group(1)
+    return entry
+
+
+def extract_scores(detail_text):
+    """Extract GRE and GPA fields, using ``None`` for missing scores.
+
+    :param str detail_text: Combined text from a result's detail rows.
+    :returns: GRE, GRE Q, GRE V, GRE AW, and GPA values as strings or ``None``.
+    :rtype: dict[str, str | None]
+    """
+    entry = {}
+    general_gre_match = re.search(
+        r"\bGRE(?:\s+General)?\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text
+    )
+    q_gre_match = re.search(
+        r"\bGRE(?:,?\s+Q\b|,?\s+Quantitative)\s*:?\s*(\d+(?:\.\d+)?)\b",
+        detail_text,
+    )
+    verbal_gre_match = re.search(
+        r"\bGRE(?:,?\s+V\b|,?\s+Verbal)\s*:?\s*(\d+(?:\.\d+)?)\b",
+        detail_text,
+    )
+    gpa_match = re.search(r"\bGPA\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
+    aw_gre_match = re.search(
+        r"\bGRE(?:,?\s+AW\b|,?\s+Analytical Writing)"
+        r"\s*:?\s*(\d+(?:\.\d+)?)\b",
+        detail_text,
+    )
+
+    entry["GRE"] = general_gre_match.group(1) if general_gre_match else None
+    entry["GRE Q"] = q_gre_match.group(1) if q_gre_match else None
+    entry["GRE V"] = verbal_gre_match.group(1) if verbal_gre_match else None
+    entry["GPA"] = gpa_match.group(1) if gpa_match else None
+    entry["GRE AW"] = aw_gre_match.group(1) if aw_gre_match else None
+    return entry
+
+
+def clean_comments(detail_text):
+    """Remove structured fields from the comment text.
+
+    :param str detail_text: Combined text from a result's detail rows.
+    :returns: Remaining comment text, or ``None`` if nothing remains.
+    :rtype: str | None
+    """
+    comment_text = re.sub(
+        r"\b(?:Accepted|Rejected|Wait listed|Interview) on "
+        r"[A-Z][a-z]{2} \d{2}\b",
+        "",
+        detail_text,
+    )
+    comment_text = re.sub(
+        r"\b(?:Fall|Spring|Summer|Winter) \d{4}\b", "", comment_text
+    )
+    comment_text = re.sub(
+        r"\b(?:American|International|Other)\b", "", comment_text
+    )
+    comment_text = re.sub(
+        r"\b(?:GRE(?:,?\s+(?:General|Q|Quantitative|V|Verbal|AW|"
+        r"Analytical Writing))?|GPA)\s*:?\s*\d+(?:\.\d+)?\b",
+        "",
+        comment_text,
+    )
+    return comment_text.strip(" |, ") or None
 
 
 def clean_data(soup, source_page_url):
@@ -9,7 +125,7 @@ def clean_data(soup, source_page_url):
     :param soup: Parsed survey page containing result and detail rows.
     :type soup: bs4.BeautifulSoup
     :param str source_page_url: Survey page URL recorded on each result.
-    :returns: Applicant dictionaries containing extracted fields and source text.
+    :returns: Applicant dictionaries with extracted fields and source text.
     :rtype: list[dict]
     :raises AttributeError: A result row has no recognized decision.
     :raises TypeError: A result row has no result link.
@@ -33,9 +149,8 @@ def clean_data(soup, source_page_url):
         detail_text = " ".join(details)
         raw_text = " ".join([row.get_text(" ", strip=True), *details])
         program_parts = cells[1].get_text("|", strip=True).split("|")
-        decision_text = cells[3].get_text(" ", strip=True)
         result_link = row.find("a", href=re.compile(r"^/result/\d+"))
-        result_url = (f"https://www.thegradcafe.com{result_link['href']}")
+        result_url = f"https://www.thegradcafe.com{result_link['href']}"
 
         entry = {
             "program": program_parts[0] if program_parts else None,
@@ -58,36 +173,10 @@ def clean_data(soup, source_page_url):
             "source_page_url": source_page_url,
         }
 
-        season_match = re.search(r"\b(?:Fall|Spring|Summer|Winter) \d{4}\b", detail_text)
-        us_intl_match = re.search(r"\b(?:American|International|Other)\b", detail_text)
-        decision_match = re.search(r"\b(Accepted|Rejected|Wait listed|Interview|Pending)\b", decision_text, re.IGNORECASE)
-        decision_date_match = re.search(r"\bon\s+([A-Z][a-z]{2}\s+\d{1,2}(?:,\s*\d{4})?)\b", decision_text)
-        general_gre_match = re.search(r"\bGRE(?:\s+General)?\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
-        q_gre_match = re.search(r"\bGRE(?:,?\s+Q\b|,?\s+Quantitative)\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
-        verbal_gre_match = re.search(r"\bGRE(?:,?\s+V\b|,?\s+Verbal)\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
-        gpa_match = re.search(r"\bGPA\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
-        aw_gre_match = re.search(r"\bGRE(?:,?\s+AW\b|,?\s+Analytical Writing)\s*:?\s*(\d+(?:\.\d+)?)\b", detail_text)
-
-        entry["term"] = season_match.group() if season_match else None
-        entry["US/International"] = us_intl_match.group() if us_intl_match else None
-        entry["status"] = decision_match.group(1).lower()
-        entry["GRE"] = general_gre_match.group(1) if general_gre_match else None
-        entry["GRE Q"] = q_gre_match.group(1) if q_gre_match else None
-        entry["GRE V"] = verbal_gre_match.group(1) if verbal_gre_match else None
-        entry["GPA"] = gpa_match.group(1) if gpa_match else None
-        entry["GRE AW"] = aw_gre_match.group(1) if aw_gre_match else None
-
-        if decision_match:
-            if entry["status"] == "accepted" and decision_date_match:
-                entry["accepted_date"] = decision_date_match.group(1)
-            elif entry["status"] == "rejected" and decision_date_match:
-                entry["rejected_date"] = decision_date_match.group(1)
-                
-        comment_text = re.sub(r"\b(?:Accepted|Rejected|Wait listed|Interview) on [A-Z][a-z]{2} \d{2}\b", "", detail_text)
-        comment_text = re.sub(r"\b(?:Fall|Spring|Summer|Winter) \d{4}\b", "", comment_text)
-        comment_text = re.sub(r"\b(?:American|International|Other)\b", "", comment_text)
-        comment_text = re.sub(r"\b(?:GRE(?:,?\s+(?:General|Q|Quantitative|V|Verbal|AW|Analytical Writing))?|GPA)\s*:?\s*\d+(?:\.\d+)?\b", "", comment_text)
-        entry["comments"] = comment_text.strip(" |, ") or None
+        entry.update(extract_details(detail_text))
+        entry.update(extract_decision(cells[3].get_text(" ", strip=True)))
+        entry.update(extract_scores(detail_text))
+        entry["comments"] = clean_comments(detail_text)
 
         entries.append(entry)
 
