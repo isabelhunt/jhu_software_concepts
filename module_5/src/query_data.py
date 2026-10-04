@@ -54,8 +54,8 @@ def fall_26_apps(connection):
                 )
         params = {'term' : 'Fall 2026'}
         cursor.execute(statement, params)
-        count = cursor.fetchall()
-        print(f"Fall 2026 applicant count: {count[0][0]}")
+        count = cursor.fetchone()
+        print(f"Fall 2026 applicant count: {count[0]}")
 
 # Q2
 def percent_international(connection):
@@ -160,13 +160,20 @@ def average_american_fall_26_gpa(connection):
     :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT AVG(gpa)
-            FROM applicants
-            WHERE LOWER(TRIM(us_or_international)) = 'american'
-              AND term = 'Fall 2026'
-              AND gpa IS NOT NULL
-        """)
+        statment = sql.SQL("""
+            SELECT AVG({column})
+            FROM {table_name}
+            WHERE LOWER(TRIM({column_2})) = %(us_or_international)s
+              AND {column_3} = %(term)s
+              AND {column} IS NOT NULL
+            """).format(
+            table_name = sql.Identifier("applicants"),
+            column = sql.Identifier("gpa"),
+            column_2 = sql.Identifier("us_or_international"),
+            column_3 = sql.Identifier("term"),
+            )
+        params = {"us_or_international" : "american" , "term" : "Fall 2026"}
+        cursor.execute(statment, params)
         average_gpa = cursor.fetchone()[0]
         print(f"Average GPA of American Fall 2026 applicants: {average_gpa:.2f}")
 
@@ -184,16 +191,22 @@ def percent_accepted_fall_25(connection):
     :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
+        statement = sql.SQL("""
             SELECT ROUND(
                 100.0 * COUNT(*) FILTER (
-                    WHERE LOWER(TRIM(status)) = 'accepted'
+                    WHERE LOWER(TRIM({column})) = %(status)s
                 ) / NULLIF(COUNT(*), 0),
                 2
             )
-            FROM applicants
-            WHERE term = 'Fall 2025'
-        """)
+            FROM {table_name}
+            WHERE {column_2} = %(term)s
+        """).format(
+            table_name=sql.Identifier("applicants"),
+            column=sql.Identifier("status"),
+            column_2=sql.Identifier("term"),
+        )
+        params = {"status": "accepted", "term": "Fall 2025"}
+        cursor.execute(statement, params)
         percentage = cursor.fetchone()[0]
         print(f"Fall 2025 acceptance percentage: {percentage:.2f}%")
 
@@ -211,13 +224,20 @@ def average_accepted_fall_26_gpa(connection):
     :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT AVG(gpa)
-            FROM applicants
-            WHERE LOWER(TRIM(status)) = 'accepted'
-              AND term = 'Fall 2026'
-              AND gpa IS NOT NULL
-        """)
+        statement = sql.SQL("""
+            SELECT AVG({column})
+            FROM {table_name}
+            WHERE LOWER(TRIM({column_2})) = %(status)s
+              AND {column_3} = %(term)s
+              AND {column} IS NOT NULL
+        """).format(
+            table_name=sql.Identifier("applicants"),
+            column=sql.Identifier("gpa"),
+            column_2=sql.Identifier("status"),
+            column_3=sql.Identifier("term"),
+        )
+        params = {"status": "accepted", "term": "Fall 2026"}
+        cursor.execute(statement, params)
         average_gpa = cursor.fetchone()[0]
         print(f"Average GPA of accepted Fall 2026 applicants: {average_gpa:.2f}")
 
@@ -234,17 +254,33 @@ def jhu_comp_sci_masters_count(connection):
     :raises psycopg.Error: A database query fails.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
+        statement = sql.SQL("""
             SELECT COUNT(*)
-            FROM applicants
+            FROM {table_name}
             WHERE (
-                LOWER(program) LIKE '%johns hopkins university%'
-                OR LOWER(program) LIKE '%jhu%'
-                OR LOWER(program) LIKE '%johns hopkins%'
+                LOWER({column}) LIKE %(university)s
+                OR LOWER({column}) LIKE %(abbreviation)s
+                OR LOWER({column}) LIKE %(short_name)s
             )
-              AND LOWER(program) LIKE '%computer science%'
-              AND LOWER(TRIM(degree)) IN ('masters', 'master', 'master''s')
-        """)
+              AND LOWER({column}) LIKE %(program)s
+              AND LOWER(TRIM({column_2})) IN (
+                  %(masters)s, %(master)s, %(possessive_master)s
+              )
+        """).format(
+            table_name=sql.Identifier("applicants"),
+            column=sql.Identifier("program"),
+            column_2=sql.Identifier("degree"),
+        )
+        params = {
+            "university": "%johns hopkins university%",
+            "abbreviation": "%jhu%",
+            "short_name": "%johns hopkins%",
+            "program": "%computer science%",
+            "masters": "masters",
+            "master": "master",
+            "possessive_master": "master's",
+        }
+        cursor.execute(statement, params)
         count = cursor.fetchone()[0]
         print(f"Johns Hopkins Comp Sci Applicants: {count}")
 
@@ -262,21 +298,39 @@ def accepted_fall_26_comp_sci_count(connection):
     :raises psycopg.Error: A database query fails.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
+        statement = sql.SQL("""
             SELECT COUNT(*)
-            FROM applicants
-            WHERE term = 'Fall 2026'
-              AND LOWER(TRIM(status)) = 'accepted'
-              AND LOWER(TRIM(degree)) = 'phd'
-              AND LOWER(program) LIKE '%computer science%'
+            FROM {table_name}
+            WHERE {column} = %(term)s
+              AND LOWER(TRIM({column_2})) = %(status)s
+              AND LOWER(TRIM({column_3})) = %(degree)s
+              AND LOWER({column_4}) LIKE %(program)s
               AND (
-                  LOWER(program) LIKE '%georgetown university%'
-                  OR LOWER(program) LIKE '%massachusetts institute of technology%'
-                  OR LOWER(program) LIKE '%mit%'
-                  OR LOWER(program) LIKE '%stanford university%'
-                  OR LOWER(program) LIKE '%carnegie mellon university%'
+                  LOWER({column_4}) LIKE %(georgetown)s
+                  OR LOWER({column_4}) LIKE %(mit_full)s
+                  OR LOWER({column_4}) LIKE %(mit)s
+                  OR LOWER({column_4}) LIKE %(stanford)s
+                  OR LOWER({column_4}) LIKE %(carnegie_mellon)s
               )
-        """)
+        """).format(
+            table_name=sql.Identifier("applicants"),
+            column=sql.Identifier("term"),
+            column_2=sql.Identifier("status"),
+            column_3=sql.Identifier("degree"),
+            column_4=sql.Identifier("program"),
+        )
+        params = {
+            "term": "Fall 2026",
+            "status": "accepted",
+            "degree": "phd",
+            "program": "%computer science%",
+            "georgetown": "%georgetown university%",
+            "mit_full": "%massachusetts institute of technology%",
+            "mit": "%mit%",
+            "stanford": "%stanford university%",
+            "carnegie_mellon": "%carnegie mellon university%",
+        }
+        cursor.execute(statement, params)
         count = cursor.fetchone()[0]
         print(f"Original Field Count: {count}")
         return count
@@ -295,21 +349,40 @@ def accepted_fall_26_llm_comp_sci_count(connection):
     :raises psycopg.Error: A database query fails.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
+        statement = sql.SQL("""
             SELECT COUNT(*)
-            FROM applicants
-            WHERE term = 'Fall 2026'
-              AND LOWER(TRIM(status)) = 'accepted'
-              AND LOWER(TRIM(degree)) = 'phd'
-              AND LOWER(llm_generated_program) LIKE '%computer science%'
+            FROM {table_name}
+            WHERE {column} = %(term)s
+              AND LOWER(TRIM({column_2})) = %(status)s
+              AND LOWER(TRIM({column_3})) = %(degree)s
+              AND LOWER({column_4}) LIKE %(program)s
               AND (
-                  LOWER(llm_generated_university) LIKE '%georgetown university%'
-                  OR LOWER(llm_generated_university) LIKE '%massachusetts institute of technology%'
-                  OR LOWER(llm_generated_university) LIKE '%mit%'
-                  OR LOWER(llm_generated_university) LIKE '%stanford university%'
-                  OR LOWER(llm_generated_university) LIKE '%carnegie mellon university%'
+                  LOWER({column_5}) LIKE %(georgetown)s
+                  OR LOWER({column_5}) LIKE %(mit_full)s
+                  OR LOWER({column_5}) LIKE %(mit)s
+                  OR LOWER({column_5}) LIKE %(stanford)s
+                  OR LOWER({column_5}) LIKE %(carnegie_mellon)s
               )
-        """)
+        """).format(
+            table_name=sql.Identifier("applicants"),
+            column=sql.Identifier("term"),
+            column_2=sql.Identifier("status"),
+            column_3=sql.Identifier("degree"),
+            column_4=sql.Identifier("llm_generated_program"),
+            column_5=sql.Identifier("llm_generated_university"),
+        )
+        params = {
+            "term": "Fall 2026",
+            "status": "accepted",
+            "degree": "phd",
+            "program": "%computer science%",
+            "georgetown": "%georgetown university%",
+            "mit_full": "%massachusetts institute of technology%",
+            "mit": "%mit%",
+            "stanford": "%stanford university%",
+            "carnegie_mellon": "%carnegie mellon university%",
+        }
+        cursor.execute(statement, params)
         count = cursor.fetchone()[0]
         print(f"llm Field Count: {count}")
         return count
@@ -328,13 +401,17 @@ def percent_reported_gre_v(connection):
     :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
+        statement = sql.SQL("""
             SELECT ROUND(
-                100.0 * COUNT(gre_v) / NULLIF(COUNT(*), 0),
+                100.0 * COUNT({column}) / NULLIF(COUNT(*), 0),
                 2
             )
-            FROM applicants
-            """)
+            FROM {table_name}
+        """).format(
+            table_name=sql.Identifier("applicants"),
+            column=sql.Identifier("gre_v"),
+        )
+        cursor.execute(statement)
         percentage = cursor.fetchone()[0]
         print(f"Percent reporting GRE verbal: {percentage:.2f}%")
 
@@ -351,13 +428,18 @@ def temple_apps(connection):
     :raises psycopg.Error: A database query fails.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT COUNT(program) 
-            FROM applicants
-            WHERE lower(program) like '%temple university%'
-            """)
-        count = cursor.fetchall()
-        print(f"Temple University Applicant Count: {count[0][0]}")
+        statement = sql.SQL("""
+            SELECT COUNT({column})
+            FROM {table_name}
+            WHERE LOWER({column}) LIKE %(university)s
+        """).format(
+            table_name=sql.Identifier("applicants"),
+            column=sql.Identifier("program"),
+        )
+        params = {"university": "%temple university%"}
+        cursor.execute(statement, params)
+        count = cursor.fetchone()
+        print(f"Temple University Applicant Count: {count[0]}")
 
 if __name__ == "__main__":
     db_connection = create_connection(**get_db_settings())
