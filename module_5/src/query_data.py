@@ -1,6 +1,6 @@
 """This module uses SQL to analyze GradCafe graduate acceptace data """
 import psycopg
-from psycopg import OperationalError
+from psycopg import OperationalError, sql
 
 from db_config import get_db_settings
 
@@ -45,7 +45,15 @@ def fall_26_apps(connection):
     :raises psycopg.Error: A database query fails.
     """
     with connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(term) FROM applicants WHERE term = 'Fall 2026'")
+        statement = sql.SQL(
+                """SELECT COUNT({column}) FROM {table_name} 
+                WHERE {column} = %(term)s
+                """).format(
+                table_name = sql.Identifier("applicants"),
+                column = sql.Identifier("term"),
+                )
+        params = {'term' : 'Fall 2026'}
+        cursor.execute(statement, params)
         count = cursor.fetchall()
         print(f"Fall 2026 applicant count: {count[0][0]}")
 
@@ -63,16 +71,21 @@ def percent_international(connection):
     :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
+        statement = sql.SQL("""
             SELECT ROUND(
                 100.0 * COUNT(*) FILTER (
-                    WHERE LOWER(TRIM(us_or_international)) = 'international'
+                    WHERE LOWER(TRIM({column})) = %(us_or_international)s
                 ) / NULLIF(COUNT(*), 0),
                 2
             )
-            FROM applicants
-            WHERE us_or_international IS NOT NULL
-        """)
+            FROM {table_name}
+            WHERE {column} IS NOT NULL
+        """).format(
+            table_name = sql.Identifier("applicants"),
+            column = sql.Identifier("us_or_international"),
+        )
+        params = {"us_or_international" : "international"}
+        cursor.execute(statement, params)
         percentage = cursor.fetchone()[0]
         print(f"Percent International: {percentage:.2f}%")
 
@@ -90,19 +103,46 @@ def average_stats (connection):
     :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
     """
     with connection.cursor() as cursor:
-        cursor.execute("SELECT AVG(gpa) FROM applicants WHERE gpa IS NOT NULL")
+        statement = sql.SQL("""SELECT AVG({column}) 
+            FROM {table_name} WHERE {column} IS NOT NULL"""
+            ).format(
+            table_name = sql.Identifier("applicants"),
+            column = sql.Identifier("gpa"),
+            )
+        cursor.execute(statement)
         average_gpa = cursor.fetchone()[0]
         print(f"Average GPA: {average_gpa:.2f}")
 
-        cursor.execute("SELECT AVG(gre) FROM applicants WHERE gre IS NOT NULL")
+    with connection.cursor() as cursor:
+        statement = sql.SQL("""SELECT AVG({column}) 
+            FROM {table_name} WHERE {column} IS NOT NULL"""
+            ).format(
+            table_name = sql.Identifier("applicants"),
+            column = sql.Identifier("gre"),
+            )
+        cursor.execute(statement)
         average_gre = cursor.fetchone()[0]
         print(f"Average GRE Quantitative: {average_gre:.2f}")
 
-        cursor.execute("SELECT AVG(gre_v) FROM applicants WHERE gre_v IS NOT NULL")
+    with connection.cursor() as cursor:
+        statement = sql.SQL("""SELECT AVG({column}) 
+            FROM {table_name} WHERE {column} IS NOT NULL"""
+            ).format(
+            table_name = sql.Identifier("applicants"),
+            column = sql.Identifier("gre_v"),
+            )
+        cursor.execute(statement)
         average_gre_v = cursor.fetchone()[0]
         print(f"Average GRE Verbal: {average_gre_v:.2f}")
 
-        cursor.execute("SELECT AVG(gre_aw) FROM applicants WHERE gre_aw IS NOT NULL")
+    with connection.cursor() as cursor:
+        statement = sql.SQL("""SELECT AVG({column}) 
+            FROM {table_name} WHERE {column} IS NOT NULL"""
+            ).format(
+            table_name = sql.Identifier("applicants"),
+            column = sql.Identifier("gre_aw"),
+            )
+        cursor.execute(statement)
         average_gre_aw = cursor.fetchone()[0]
         print(f"Average GRE Analytical Writing: {average_gre_aw:.2f}")
 
