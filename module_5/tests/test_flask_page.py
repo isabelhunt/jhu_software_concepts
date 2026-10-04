@@ -42,7 +42,7 @@ def app():
 
 @pytest.fixture()
 def analysis_data(mocker):
-    mocker.patch.object(pages, "connect_db")
+    mocker.patch.object(pages.Applicant, "connect_db")
     mocker.patch.object(pages, "Session")
     results = {
         "fall_26_apps": 12,

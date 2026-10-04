@@ -8,10 +8,10 @@ from flask import Blueprint, current_app, jsonify, render_template, request
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 if __package__ == "board":
-    from models import connect_db
+    from models import Applicant
     import orm_queries
 else:
-    from ..models import connect_db
+    from ..models import Applicant
     from .. import orm_queries
 
 bp = Blueprint("pages", __name__)
@@ -72,7 +72,7 @@ def home():
         )), 409
     db = None
     try:
-        db = connect_db()
+        db = Applicant.connect_db()
         with Session(db) as session:
             results = {
                 "q1": orm_queries.fall_26_apps(session),

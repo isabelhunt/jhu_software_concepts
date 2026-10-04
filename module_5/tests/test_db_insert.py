@@ -68,7 +68,7 @@ def test_connect_db_builds_url_and_returns_engine(mocker, capsys):
     create_engine = mocker.patch.object(models, "create_engine")
     engine = create_engine.return_value
 
-    result = models.connect_db()
+    result = models.Applicant.connect_db()
 
     get_settings.assert_called_once_with()
     create_engine.assert_called_once()
@@ -201,7 +201,7 @@ def test_scrape_resumes_existing_json(monkeypatch, mocker, tmp_path, capsys, tim
 @pytest.mark.db
 @pytest.mark.parametrize("failure_stage", ["connection", "query"])
 def test_analysis_database_error(mocker, failure_stage):
-    connect = mocker.patch.object(pages, "connect_db")
+    connect = mocker.patch.object(pages.Applicant, "connect_db")
     mocker.patch.object(pages, "Session")
     query = mocker.patch.object(pages.orm_queries, "fall_26_apps")
     error = SQLAlchemyError("Simulated database failure")

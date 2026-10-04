@@ -129,7 +129,7 @@ def test_pull_data(monkeypatch, mocker, tmp_path):
 @pytest.mark.buttons
 def test_busy_gating(monkeypatch, mocker, tmp_path):
     monkeypatch.setattr(pages, "MODULE_DIR", tmp_path)
-    mock_connect = mocker.patch.object(pages, "connect_db")
+    mock_connect = mocker.patch.object(pages.Applicant, "connect_db")
     mock_session = mocker.patch.object(pages, "Session")
     mock_queries = mocker.patch.object(pages, "orm_queries")
     mock_run = mocker.patch.object(pages.subprocess, "run")
@@ -158,7 +158,7 @@ def test_busy_gating(monkeypatch, mocker, tmp_path):
 @pytest.mark.buttons
 def test_update_analysis(monkeypatch, mocker, tmp_path):
     monkeypatch.setattr(pages, "MODULE_DIR", tmp_path)
-    mocker.patch.object(pages, "connect_db")
+    mocker.patch.object(pages.Applicant, "connect_db")
     mock_session = mocker.patch.object(pages, "Session")
     session = mock_session.return_value.__enter__.return_value
     results = {

@@ -93,7 +93,7 @@ def test_query_data_answers_all_questions(mocker, capsys):
 
 @pytest.mark.analysis
 def test_analysis_answer_labels(mocker):
-    mocker.patch.object(pages, "connect_db")
+    mocker.patch.object(pages.Applicant, "connect_db")
     mocker.patch.object(pages, "Session")
     results = {
         "fall_26_apps": 12,
@@ -129,7 +129,7 @@ def test_analysis_answer_labels(mocker):
     (25.0, "25.00"),
 ])
 def test_decimal_results_have_two_decimal_places(mocker, value, expected):
-    mocker.patch.object(pages, "connect_db")
+    mocker.patch.object(pages.Applicant, "connect_db")
     mocker.patch.object(pages, "Session")
     results = {
         "fall_26_apps": 12,

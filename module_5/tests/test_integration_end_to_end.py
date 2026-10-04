@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, select
 
 from src.board import create_app, pages
 from src.load_data import load_data
-from src.models import Base, applicant
+from src.models import Base, Applicant
 
 
 @pytest.fixture()
@@ -19,7 +19,7 @@ def integration_pipeline(monkeypatch, mocker, tmp_path):
     real_dispose = engine.dispose
     mocker.patch.object(engine, "dispose")
     monkeypatch.setattr(pages, "MODULE_DIR", tmp_path)
-    mocker.patch.object(pages, "connect_db", return_value=engine)
+    mocker.patch.object(pages.Applicant, "connect_db", return_value=engine)
 
     scraper = mocker.Mock()
     inserted_counts = []
@@ -102,7 +102,7 @@ def test_overlapping_pulls_preserve_uniqueness(integration_pipeline, has_url):
     assert first.status_code == 200
     assert first.get_json() == {"success": True}
     with engine.connect() as db:
-        before = db.execute(select(applicant.__table__).order_by(applicant.p_id)).mappings().all()
+        before = db.execute(select(Applicant.__table__).order_by(Applicant.p_id)).mappings().all()
     assert len(before) == 2
 
     second = client.post("/pull-data")
@@ -110,7 +110,7 @@ def test_overlapping_pulls_preserve_uniqueness(integration_pipeline, has_url):
     assert second.get_json() == {"success": True}
     assert inserted_counts == [2, 1]
     with engine.connect() as db:
-        after = db.execute(select(applicant.__table__).order_by(applicant.p_id)).mappings().all()
+        after = db.execute(select(Applicant.__table__).order_by(Applicant.p_id)).mappings().all()
     assert len(after) == 3
     assert after[:2] == before
     assert [row["comments"] for row in after] == [record["comments"] for record in records]
@@ -154,7 +154,7 @@ def test_pull_and_update_analysis_end_to_end(integration_pipeline):
         return re.findall(r'<p class="value">(.*?)</p>', html)
 
     with engine.connect() as db:
-        assert db.execute(select(applicant.__table__)).all() == []
+        assert db.execute(select(Applicant.__table__)).all() == []
     assert rendered_values(client.get("/")) == ["0", "N/A", "N/A", "0", "0", "N/A"]
 
     pull = client.post("/pull-data")
@@ -163,7 +163,7 @@ def test_pull_and_update_analysis_end_to_end(integration_pipeline):
     scraper.assert_called_once_with()
     assert inserted_counts == [len(records)]
     with engine.connect() as db:
-        stored = db.execute(select(applicant.__table__).order_by(applicant.url)).mappings().all()
+        stored = db.execute(select(Applicant.__table__).order_by(Applicant.url)).mappings().all()
     assert len(stored) == len(records)
     for row, record in zip(stored, records, strict=True):
         assert row["url"] == record["url"]
