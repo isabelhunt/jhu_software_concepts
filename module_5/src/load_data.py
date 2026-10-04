@@ -15,7 +15,6 @@ from psycopg import sql
 
 from db_config import get_db_settings
 
-
 def create_connection(db_name, db_user, db_password, db_host, db_port):
     """Open a PostgreSQL connection and print its connection status.
 
@@ -42,6 +41,27 @@ def create_connection(db_name, db_user, db_password, db_host, db_port):
     except OperationalError as e:
         print(f"The error '{e}' occurred")
     return connection
+
+def clear_applicants(connection, table_name="applicants"):
+    """Delete all rows from the applicant table and reset generated IDs.
+
+    Keep the table schema so records can be loaded again. The deletion is
+    permanent when the enclosing transaction commits.
+
+    :param connection: Open PostgreSQL connection.
+    :type connection: psycopg.Connection
+    :param str table_name: Table to empty; defaults to ``applicants``.
+    :returns: None.
+    :rtype: None
+    :raises psycopg.Error: The table cannot be truncated.
+    """
+    statement = sql.SQL("TRUNCATE TABLE {} RESTART IDENTITY").format(
+        sql.Identifier(table_name)
+    )
+    with connection.transaction():
+        with connection.cursor() as cursor:
+            cursor.execute(statement)
+
 
 def read_applicant_rows(file_path=None):
     """Read and normalize applicant records for database insertion.
@@ -72,7 +92,7 @@ def read_applicant_rows(file_path=None):
 
                 scores = [
                     float(entry[key]) if entry.get(key) not in (None, "") else None
-                    for key in ("GPA", "GRE", "GRE V", "GRE AW")
+                    for key in ("GPA", "GRE Q", "GRE V", "GRE AW")
                 ]
                 program = ", ".join(
                     value.strip()
@@ -193,6 +213,7 @@ if __name__ == "__main__":
     conn = create_connection(**get_db_settings())
     if conn is None:
         raise SystemExit(1)
-    with conn:
-        count = load_data(conn, file_path=args.file_path)
-        print(f"Loaded {count} records into grad_data.")
+    if conn is not None:
+        with conn:
+            count = load_data(conn, file_path=args.file_path)
+            print(f"Loaded {count} records into grad_data.")

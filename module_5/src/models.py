@@ -26,7 +26,7 @@ class Applicant(Base):
     :ivar str term: Application term, such as Fall 2026.
     :ivar str us_or_international: Applicant origin category.
     :ivar float gpa: Reported grade point average.
-    :ivar float gre: Reported GRE general score.
+    :ivar float gre: Reported GRE quantitative score.
     :ivar float gre_v: Reported GRE verbal score.
     :ivar float gre_aw: Reported GRE analytical writing score.
     :ivar str degree: Degree sought by the applicant.
