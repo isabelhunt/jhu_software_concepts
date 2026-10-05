@@ -71,13 +71,13 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           PYTHONPATH: src
-        run: python -m pylint src --fail-under=10
+        run: python -m pylint src/*.py --fail-under=10
       - name: Generate and verify dependency.svg
         if: ${{ !cancelled() }}
         env:
           PYTHONPATH: src
         run: |
-          python -m pydeps src --no-show -o "$RUNNER_TEMP/dependency.svg"
+          python -m pydeps src --no-show -T svg -o "$RUNNER_TEMP/dependency.svg"
           test -s "$RUNNER_TEMP/dependency.svg"
           cp "$RUNNER_TEMP/dependency.svg" dependency.svg
       - name: Run Snyk dependency scan
