@@ -9,30 +9,41 @@ and a GitHub Actions workflow.
 To view the full documentation: 
 https://jhu-software-concepts-hunt.readthedocs.io/en/latest/#
 
-All commands below run from `module_4/` unless stated otherwise.
+All commands below run from `module_5/` unless stated otherwise.
 
-## Environment and dependencies
+## Fresh Install
 
-Create and activate a virtual environment:
+Choose either method below from the `module_5/` directory. Both install the
+project in editable mode and include the dependencies in `requirements.txt`:
+application, local LLM runtime, tests, documentation, and development tools.
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+### Using pip
 
-On Windows, activate with `venv\Scripts\activate` instead.
-
-Install application, test, and documentation dependencies together:
+With Python 3 and pip installed, create and activate a virtual environment:
 
 ```bash
-python -m pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
 
-This shared file includes the LLM runtime, so CI and documentation builds also
-install its dependencies.
+### Using uv
 
-The application uses Unix file locking through `fcntl`; run the Flask app and
-tests on Linux, macOS, or WSL.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first,
+then create an environment and install the project:
+
+```bash
+uv venv .venv
+source .venv/bin/activate
+uv pip compile requirements.txt -o requirements.lock.txt
+uv pip sync requirements.lock.txt
+uv pip install --no-deps -e .
+```
+
+The compile step resolves direct and transitive dependencies into a pinned
+file. `uv pip sync` makes the environment match that file, then the final
+command installs the editable project using those dependencies. See the
+[uv locking documentation](https://docs.astral.sh/uv/pip/compile/).
 
 ## Database configuration
 
@@ -60,7 +71,7 @@ The analysis page requires an `applicants` table populated with applicant record
 ## Run the Flask application
 
 ```bash
-python -m src.run
+python -m src.app
 ```
 
 Open <http://localhost:8080/>. The development server runs with debug mode enabled.
@@ -158,6 +169,6 @@ pylint load_data.py
 pylint models.py
 pylint orm_queries.py
 pylint query_data.py
-pylint run.py
+pylint app.py
 pylint scrape.py
 ```

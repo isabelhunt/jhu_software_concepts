@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from flask import Flask 
 from src.board.__init__ import create_app
-from src import run
+from src import app as app_module
 from src.board import pages
 
 @pytest.mark.web
@@ -15,7 +15,7 @@ def test_create_app():
     assert isinstance(app, Flask)
     assert app.blueprints['pages'] is not None
 
-    terminal_app_access = run.app
+    terminal_app_access = app_module.app
     assert terminal_app_access is not None
     assert isinstance(terminal_app_access, Flask)
     assert terminal_app_access.blueprints['pages'] is not None
@@ -23,7 +23,7 @@ def test_create_app():
 
 @pytest.mark.web
 def test_run_as_script(monkeypatch, mocker):
-    run_path = Path(run.__file__).resolve()
+    run_path = Path(app_module.__file__).resolve()
     monkeypatch.syspath_prepend(str(run_path.parent))
     mock_run = mocker.patch.object(Flask, "run", autospec=True)
     namespace = runpy.run_path(str(run_path), run_name="__main__")
