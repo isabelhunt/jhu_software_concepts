@@ -399,7 +399,14 @@ def insertion_db(mocker):
     rows = []
     connection = mocker.MagicMock()
     cursor = connection.cursor.return_value.__enter__.return_value
-    cursor.__iter__.side_effect = lambda: iter(rows)
+    def selected_rows():
+        params = cursor.execute.call_args.args[1]
+        last_id = params[0] if len(params) == 2 else 0
+        limit = params[-1]
+        return iter([(index, *row) for index, row in enumerate(rows, start=1)
+                     if index > last_id][:limit])
+
+    cursor.__iter__.side_effect = selected_rows
 
     def record_insert(statement, new_rows):
         assert "INSERT INTO" in statement.as_string()
@@ -407,6 +414,30 @@ def insertion_db(mocker):
 
     cursor.executemany.side_effect = record_insert
     return connection, cursor, rows
+
+
+@pytest.mark.db
+@pytest.mark.parametrize("has_url", [True, False], ids=["with-url", "without-url"])
+def test_load_data_checks_duplicates_beyond_first_batch(
+    monkeypatch, tmp_path, insertion_db, has_url
+):
+    connection, cursor, rows = insertion_db
+    monkeypatch.setattr(data_loader, "READ_BATCH_SIZE", 2)
+    records = [{"program": f"Program {number}",
+                "url": f"https://example.com/{number}" if has_url else None}
+               for number in range(5)]
+    source = tmp_path / "applicants.json"
+    source.write_text(json.dumps(records))
+    rows.extend(data_loader.read_applicant_rows(source))
+    original_rows = list(rows)
+
+    assert load_data(connection, file_path=source) == 0
+    assert rows == original_rows
+    selects = [call for call in cursor.execute.call_args_list
+               if "SELECT" in call.args[0].as_string()]
+    assert [call.args[1] for call in selects] == [(2,), (2, 2), (4, 2), (5, 2)]
+    assert all("ORDER BY p_id" in call.args[0].as_string()
+               and "LIMIT %s" in call.args[0].as_string() for call in selects)
 
 
 @pytest.mark.db

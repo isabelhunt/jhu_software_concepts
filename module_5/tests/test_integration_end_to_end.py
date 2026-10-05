@@ -41,14 +41,16 @@ def integration_pipeline(monkeypatch, mocker, tmp_path):
                 connection = mocker.MagicMock()
                 cursor = connection.cursor.return_value.__enter__.return_value
                 # Schema exists already; PostgreSQL DDL and locks are mocked.
-                cursor.__iter__.side_effect = lambda: iter(
-                    tuple(date.fromisoformat(value) if index == 2 and value else value
-                          for index, value in enumerate(row))
-                    for row in raw.execute(
-                    "SELECT program, comments, date_added, url, status, term, "
-                    "us_or_international, gpa, gre, gre_v, gre_aw, degree, "
-                    "llm_generated_program, llm_generated_university FROM applicants"
-                ).fetchall())
+                def selected_rows():
+                    params = cursor.execute.call_args.args[1]
+                    statement = cursor.execute.call_args.args[0].as_string()
+                    return iter(
+                        tuple(date.fromisoformat(value) if index == 3 and value else value
+                              for index, value in enumerate(row))
+                        for row in raw.execute(statement.replace("%s", "?"), params).fetchall()
+                    )
+
+                cursor.__iter__.side_effect = selected_rows
 
                 def insert_rows(statement, rows):
                     raw.executemany(

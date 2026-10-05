@@ -20,6 +20,7 @@ def fall_26_apps(connection):
         statement = sql.SQL(
                 """SELECT COUNT({column}) FROM {table_name} 
                 WHERE {column} = %(term)s
+                LIMIT 1
                 """).format(
                 table_name = sql.Identifier("applicants"),
                 column = sql.Identifier("term"),
@@ -52,6 +53,7 @@ def percent_international(connection):
             )
             FROM {table_name}
             WHERE {column} IS NOT NULL
+            LIMIT 1
         """).format(
             table_name = sql.Identifier("applicants"),
             column = sql.Identifier("us_or_international"),
@@ -76,7 +78,9 @@ def average_stats (connection):
     """
     with connection.cursor() as cursor:
         statement = sql.SQL("""SELECT AVG({column})
-            FROM {table_name} WHERE {column} IS NOT NULL"""
+            FROM {table_name} WHERE {column} IS NOT NULL
+            LIMIT 1
+        """
             ).format(
             table_name = sql.Identifier("applicants"),
             column = sql.Identifier("gpa"),
@@ -87,7 +91,9 @@ def average_stats (connection):
 
     with connection.cursor() as cursor:
         statement = sql.SQL("""SELECT AVG({column})
-            FROM {table_name} WHERE {column} IS NOT NULL"""
+            FROM {table_name} WHERE {column} IS NOT NULL
+            LIMIT 1
+        """
             ).format(
             table_name = sql.Identifier("applicants"),
             column = sql.Identifier("gre"),
@@ -98,7 +104,9 @@ def average_stats (connection):
 
     with connection.cursor() as cursor:
         statement = sql.SQL("""SELECT AVG({column})
-            FROM {table_name} WHERE {column} IS NOT NULL"""
+            FROM {table_name} WHERE {column} IS NOT NULL
+            LIMIT 1
+        """
             ).format(
             table_name = sql.Identifier("applicants"),
             column = sql.Identifier("gre_v"),
@@ -109,7 +117,9 @@ def average_stats (connection):
 
     with connection.cursor() as cursor:
         statement = sql.SQL("""SELECT AVG({column})
-            FROM {table_name} WHERE {column} IS NOT NULL"""
+            FROM {table_name} WHERE {column} IS NOT NULL
+            LIMIT 1
+        """
             ).format(
             table_name = sql.Identifier("applicants"),
             column = sql.Identifier("gre_aw"),
@@ -138,7 +148,8 @@ def average_american_fall_26_gpa(connection):
             WHERE LOWER(TRIM({column_2})) = %(us_or_international)s
               AND {column_3} = %(term)s
               AND {column} IS NOT NULL
-            """).format(
+            LIMIT 1
+        """).format(
             table_name = sql.Identifier("applicants"),
             column = sql.Identifier("gpa"),
             column_2 = sql.Identifier("us_or_international"),
@@ -172,6 +183,7 @@ def percent_accepted_fall_25(connection):
             )
             FROM {table_name}
             WHERE {column_2} = %(term)s
+            LIMIT 1
         """).format(
             table_name=sql.Identifier("applicants"),
             column=sql.Identifier("status"),
@@ -202,6 +214,7 @@ def average_accepted_fall_26_gpa(connection):
             WHERE LOWER(TRIM({column_2})) = %(status)s
               AND {column_3} = %(term)s
               AND {column} IS NOT NULL
+            LIMIT 1
         """).format(
             table_name=sql.Identifier("applicants"),
             column=sql.Identifier("gpa"),
@@ -238,6 +251,7 @@ def jhu_comp_sci_masters_count(connection):
               AND LOWER(TRIM({column_2})) IN (
                   %(masters)s, %(master)s, %(possessive_master)s
               )
+            LIMIT 1
         """).format(
             table_name=sql.Identifier("applicants"),
             column=sql.Identifier("program"),
@@ -284,6 +298,7 @@ def accepted_fall_26_comp_sci_count(connection):
                   OR LOWER({column_4}) LIKE %(stanford)s
                   OR LOWER({column_4}) LIKE %(carnegie_mellon)s
               )
+            LIMIT 1
         """).format(
             table_name=sql.Identifier("applicants"),
             column=sql.Identifier("term"),
@@ -335,6 +350,7 @@ def accepted_fall_26_llm_comp_sci_count(connection):
                   OR LOWER({column_5}) LIKE %(stanford)s
                   OR LOWER({column_5}) LIKE %(carnegie_mellon)s
               )
+            LIMIT 1
         """).format(
             table_name=sql.Identifier("applicants"),
             column=sql.Identifier("term"),
@@ -379,6 +395,7 @@ def percent_reported_gre_v(connection):
                 2
             )
             FROM {table_name}
+            LIMIT 1
         """).format(
             table_name=sql.Identifier("applicants"),
             column=sql.Identifier("gre_v"),
@@ -404,6 +421,7 @@ def temple_apps(connection):
             SELECT COUNT({column})
             FROM {table_name}
             WHERE LOWER({column}) LIKE %(university)s
+            LIMIT 1
         """).format(
             table_name=sql.Identifier("applicants"),
             column=sql.Identifier("program"),

@@ -15,6 +15,31 @@ from psycopg import sql
 
 from db_config import get_db_settings
 
+
+def iter_existing_rows(cursor, table):
+    """Yield all stored records using bounded queries ordered by primary key."""
+    read_batch_size = 1000
+    last_id = None
+    while True:
+        predicate = sql.SQL("") if last_id is None else sql.SQL("WHERE p_id > %s")
+        statement = sql.SQL("""
+            SELECT p_id, program, comments, date_added, url, status, term,
+                   us_or_international, gpa, gre, gre_v, gre_aw, degree,
+                   llm_generated_program, llm_generated_university
+            FROM {}
+            {}
+            ORDER BY p_id
+            LIMIT %s
+        """).format(table, predicate)
+        params = (read_batch_size,) if last_id is None else (last_id, read_batch_size)
+        cursor.execute(statement, params)
+        batch = list(cursor)
+        if not batch:
+            return
+        for record in batch:
+            yield record[1:]
+        last_id = batch[-1][0]
+
 def create_connection(db_name, db_user, db_password, db_host, db_port):
     """Open a PostgreSQL connection and print its connection status.
 
@@ -189,13 +214,7 @@ def load_data(connection, table_name="applicants", file_path=None):
             """).format(table))
             # Serialize loaders so they cannot insert the same new URL together.
             cursor.execute(sql.SQL("LOCK TABLE {} IN SHARE ROW EXCLUSIVE MODE").format(table))
-            cursor.execute(sql.SQL("""
-                SELECT program, comments, date_added, url, status, term,
-                       us_or_international, gpa, gre, gre_v, gre_aw, degree,
-                       llm_generated_program, llm_generated_university
-                FROM {}
-            """).format(table))
-            new_rows = select_new_rows(rows, cursor)
+            new_rows = select_new_rows(rows, iter_existing_rows(cursor, table))
 
             cursor.executemany(sql.SQL("""
                 INSERT INTO {} (

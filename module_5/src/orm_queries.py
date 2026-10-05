@@ -23,7 +23,7 @@ def fall_26_apps(session):
     :raises sqlalchemy.exc.SQLAlchemyError: The database query fails.
     """
     count = session.scalar(
-        select(sql_count(Applicant.term)).where(Applicant.term == "Fall 2026")
+        select(sql_count(Applicant.term)).where(Applicant.term == "Fall 2026").limit(1)
     )
     print(f"Fall 2026 applicant count: {count}")
     return count
@@ -47,7 +47,7 @@ def average_american_fall_26_gpa(session):
             func.lower(func.trim(Applicant.us_or_international)) == "american",
             Applicant.term == "Fall 2026",
             Applicant.gpa.is_not(None),
-        )
+        ).limit(1)
     )
     result = "N/A" if average_gpa is None else f"{average_gpa:.2f}"
     print(f"Average GPA of American Fall 2026 applicants: {result}")
@@ -71,7 +71,7 @@ def percent_accepted_fall_25(session):
     percentage = session.scalar(
         select(func.round(
             Decimal("100.0") * accepted / func.nullif(sql_count(), 0), 2
-        )).select_from(Applicant).where(Applicant.term == "Fall 2025")
+        )).select_from(Applicant).where(Applicant.term == "Fall 2025").limit(1)
     )
     result = "N/A" if percentage is None else f"{percentage:.2f}%"
     print(f"Fall 2025 acceptance percentage: {result}")
@@ -117,7 +117,7 @@ def accepted_fall_26_comp_sci_count(session):
             func.lower(func.trim(Applicant.degree)) == "phd",
             func.lower(Applicant.program).like("%computer science%"),
             _selected_university(Applicant.program),
-        )
+        ).limit(1)
     )
     print(f"Original Field Count: {count}")
     return count
@@ -143,7 +143,7 @@ def accepted_fall_26_llm_comp_sci_count(session):
             func.lower(func.trim(Applicant.degree)) == "phd",
             func.lower(Applicant.llm_generated_program).like("%computer science%"),
             _selected_university(Applicant.llm_generated_university),
-        )
+        ).limit(1)
     )
     print(f"llm Field Count: {count}")
     return count
@@ -166,7 +166,7 @@ def percent_reported_gre_v(session):
         select(func.round(
             Decimal("100.0") * sql_count(Applicant.gre_v)
             / func.nullif(sql_count(), 0), 2
-        )).select_from(Applicant)
+        )).select_from(Applicant).limit(1)
     )
     result = "N/A" if percentage is None else f"{percentage:.2f}%"
     print(f"Percent reporting GRE verbal: {result}")

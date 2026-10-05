@@ -61,7 +61,13 @@ def test_pull_data(monkeypatch, mocker, tmp_path):
     connection = mocker.MagicMock()
     cursor = connection.cursor.return_value.__enter__.return_value
     stored_rows = []
-    cursor.__iter__.side_effect = lambda: iter(stored_rows)
+    def selected_rows():
+        params = cursor.execute.call_args.args[1]
+        last_id = params[0] if len(params) == 2 else 0
+        return iter([(index, *row) for index, row in enumerate(stored_rows, start=1)
+                     if index > last_id][:params[-1]])
+
+    cursor.__iter__.side_effect = selected_rows
     cursor.executemany.side_effect = lambda statement, rows: stored_rows.extend(rows)
     inserted_counts = []
     second_responses = []
