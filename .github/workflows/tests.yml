@@ -1,0 +1,99 @@
+name: Module 5 quality checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: module_5
+    env:
+      DB_NAME: applicants_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: applicants_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d applicants_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: module_5/requirements.txt
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r requirements.txt
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+      - name: Verify PostgreSQL and create test tables
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          from src.models import Applicant, Base
+
+          engine = Applicant.connect_db()
+          try:
+              Base.metadata.create_all(engine)
+          finally:
+              engine.dispose()
+          PY
+      - name: Run Pylint (minimum score 10)
+        if: ${{ !cancelled() }}
+        env:
+          PYTHONPATH: src
+        run: python -m pylint src --fail-under=10
+      - name: Generate and verify dependency.svg
+        if: ${{ !cancelled() }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pydeps src --no-show -o "$RUNNER_TEMP/dependency.svg"
+          test -s "$RUNNER_TEMP/dependency.svg"
+          cp "$RUNNER_TEMP/dependency.svg" dependency.svg
+      - name: Run Snyk dependency scan
+        if: ${{ !cancelled() }}
+        # Change to false to make security findings block the workflow.
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --file=requirements.txt --package-manager=pip --command=python
+      - name: Run Pytest and require 100% coverage
+        if: ${{ !cancelled() }}
+        run: python -m pytest tests --strict-markers
+      - name: Upload dependency graph
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-graph
+          path: module_5/dependency.svg
+          if-no-files-found: error
