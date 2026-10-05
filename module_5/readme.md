@@ -161,7 +161,7 @@ The workflow database uses disposable test credentials. The suite's mocked and
 SQLite tests remain offline even though CI also checks PostgreSQL connectivity.
 
 ## Pylint
-I ran each module thorugh the linter individually as follows:
+I ran each module thorugh the linter individually, then together:
 ```bash
 pylint clean.py
 pylint db_config.py
@@ -171,4 +171,5 @@ pylint orm_queries.py
 pylint query_data.py
 pylint app.py
 pylint scrape.py
+python -m pylint src/*.py --fail-under=10
 ```

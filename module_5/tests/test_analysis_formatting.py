@@ -37,7 +37,14 @@ def test_query_data_answers_all_questions(mocker, capsys):
         cursor = connection.cursor.return_value.__enter__.return_value
         sql_cursor = database.cursor()
         # Execute the actual SQL against fake records, without PostgreSQL.
-        cursor.execute.side_effect = sql_cursor.execute
+        def execute_sql(statement, params=None):
+            if isinstance(statement, psycopg.sql.Composable):
+                statement = statement.as_string()
+            # Translate psycopg named placeholders to SQLite named placeholders.
+            statement = re.sub(r"%\((\w+)\)s", r":\1", statement)
+            return sql_cursor.execute(statement, params if params is not None else {})
+
+        cursor.execute.side_effect = execute_sql
         cursor.fetchone.side_effect = sql_cursor.fetchone
         cursor.fetchall.side_effect = sql_cursor.fetchall
         connect = mocker.patch.object(psycopg, "connect", return_value=connection)

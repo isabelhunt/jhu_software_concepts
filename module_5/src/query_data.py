@@ -1,36 +1,8 @@
 """This module uses SQL to analyze GradCafe graduate acceptace data """
-import psycopg
-from psycopg import OperationalError, sql
+from psycopg import sql
 
 from db_config import get_db_settings
-
-
-def create_connection(db_name, db_user, db_password, db_host, db_port):
-    """Open a PostgreSQL connection and print its connection status.
-
-    Operational errors are printed and handled without being re-raised.
-
-    :param str db_name: PostgreSQL database name.
-    :param str db_user: Database login name.
-    :param str db_password: Database login password.
-    :param str db_host: Database server hostname or address.
-    :param int db_port: Database server port.
-    :returns: An open connection, or ``None`` if an operational error occurs.
-    :rtype: psycopg.Connection or None
-    """
-    connection = None
-    try:
-        connection = psycopg.connect(
-            dbname=db_name,
-            user=db_user,
-            password=db_password,
-            host=db_host,
-            port=db_port,
-                )
-        print("Connection to PostgreSQL DB successful")
-    except OperationalError as e:
-        print(f"The error '{e}' occurred")
-    return connection
+from load_data import create_connection
 
 # Q1
 def fall_26_apps(connection):
@@ -103,7 +75,7 @@ def average_stats (connection):
     :raises TypeError: An aggregate is ``None`` and cannot be formatted numerically.
     """
     with connection.cursor() as cursor:
-        statement = sql.SQL("""SELECT AVG({column}) 
+        statement = sql.SQL("""SELECT AVG({column})
             FROM {table_name} WHERE {column} IS NOT NULL"""
             ).format(
             table_name = sql.Identifier("applicants"),
@@ -114,7 +86,7 @@ def average_stats (connection):
         print(f"Average GPA: {average_gpa:.2f}")
 
     with connection.cursor() as cursor:
-        statement = sql.SQL("""SELECT AVG({column}) 
+        statement = sql.SQL("""SELECT AVG({column})
             FROM {table_name} WHERE {column} IS NOT NULL"""
             ).format(
             table_name = sql.Identifier("applicants"),
@@ -125,7 +97,7 @@ def average_stats (connection):
         print(f"Average GRE Quantitative: {average_gre:.2f}")
 
     with connection.cursor() as cursor:
-        statement = sql.SQL("""SELECT AVG({column}) 
+        statement = sql.SQL("""SELECT AVG({column})
             FROM {table_name} WHERE {column} IS NOT NULL"""
             ).format(
             table_name = sql.Identifier("applicants"),
@@ -136,7 +108,7 @@ def average_stats (connection):
         print(f"Average GRE Verbal: {average_gre_v:.2f}")
 
     with connection.cursor() as cursor:
-        statement = sql.SQL("""SELECT AVG({column}) 
+        statement = sql.SQL("""SELECT AVG({column})
             FROM {table_name} WHERE {column} IS NOT NULL"""
             ).format(
             table_name = sql.Identifier("applicants"),
