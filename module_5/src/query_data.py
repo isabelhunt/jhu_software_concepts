@@ -441,7 +441,7 @@ def temple_apps(connection):
         count = cursor.fetchone()
         print(f"Temple University Applicant Count: {count[0]}")
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     db_connection = create_connection(**get_db_settings())
     if db_connection is not None:
         with db_connection:

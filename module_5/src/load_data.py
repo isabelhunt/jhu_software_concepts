@@ -206,7 +206,7 @@ def load_data(connection, table_name="applicants", file_path=None):
             """).format(table), new_rows)
     return len(new_rows)
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     parser = argparse.ArgumentParser(description="Load applicant records into PostgreSQL.")
     parser.add_argument("--file-path", type=Path, help="JSON array or JSON Lines input file")
     args = parser.parse_args()

@@ -173,7 +173,7 @@ def percent_reported_gre_v(session):
     return percentage
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     db=Applicant.connect_db() #establish connection
     new_session = sessionmaker(bind=db)
     with new_session() as db_session:

@@ -137,5 +137,5 @@ def main():
     end_time = time.perf_counter()
     print(f"Run time: {end_time - start_time}")
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     main()

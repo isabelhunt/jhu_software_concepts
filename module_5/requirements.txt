@@ -22,4 +22,4 @@ sphinx-rtd-theme>=3,<4
 # Linting and dependency diagrams
 pylint==4.1.1
 pydeps==3.0.9
-graphviz
+graphviz==0.21
